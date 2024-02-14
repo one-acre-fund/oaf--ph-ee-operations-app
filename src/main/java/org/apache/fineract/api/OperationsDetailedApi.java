@@ -222,7 +222,7 @@ public class OperationsDetailedApi {
     public Page<TransactionRequest> transactionRequests(@RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "20") Integer size, @RequestParam(value = "payerPartyId", required = false) String payerPartyId, @RequestParam(value = "payeePartyId", required = false) String payeePartyId, @RequestParam(value = "payeePartyIdType", required = false) String payeePartyIdType, @RequestParam(value = "payeeDfspId", required = false) String payeeDfspId, @RequestParam(value = "payerDfspId", required = false) String payerDfspId, @RequestParam(value = "transactionId", required = false) String transactionId, @RequestParam(value = "state", required = false) String state, @RequestParam(value = "amount", required = false) BigDecimal amount, @RequestParam(value = "currency", required = false) String currency, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "direction", required = false) String direction, @RequestParam(value = "clientCorrelationId", required = false) String clientCorrelationId,@RequestParam(value = "externalId", required = false) String externalId, @RequestParam(value = "sortedBy", required = false) String sortedBy, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder) {
         List<Specifications<TransactionRequest>> specs = new ArrayList<>();
         if (payerPartyId != null) {
-            specs.add(TransactionRequestSpecs.match(TransactionRequest_.payerPartyId, payerPartyId));
+            specs.add(TransactionRequestSpecs.like(TransactionRequest_.payerPartyId, payerPartyId));
         }
         if (payeeDfspId != null) {
             specs.add(TransactionRequestSpecs.match(TransactionRequest_.payeeDfspId, payeeDfspId));
@@ -231,7 +231,7 @@ public class OperationsDetailedApi {
             specs.add(TransactionRequestSpecs.match(TransactionRequest_.payerDfspId, payerDfspId));
         }
         if (transactionId != null) {
-            specs.add(TransactionRequestSpecs.match(TransactionRequest_.transactionId, transactionId));
+            specs.add(TransactionRequestSpecs.like(TransactionRequest_.transactionId, transactionId));
         }
         if (state != null && parseState(state) != null) {
             specs.add(TransactionRequestSpecs.match(TransactionRequest_.state, parseState(state)));
@@ -324,7 +324,7 @@ public class OperationsDetailedApi {
         } else if (currentUser.getPayeePartyIdTypesList().equals(Collections.singletonList("*"))) {
             // user is allowed to see data from all payeePartyIdTypes. Check if they wanna filter for a specific payee, otherwise don't add to spec
             if (payeePartyIdType != null) {
-                specs.add(TransactionRequestSpecs.match(TransactionRequest_.payeePartyIdType, payeePartyIdType));
+                specs.add(TransactionRequestSpecs.like(TransactionRequest_.payeePartyIdType, payeePartyIdType));
             }
         } else {
             List<Specifications<TransactionRequest>> partyIdTypeSpecs = checkUserPayeePartyIdTypesAssigned(currentUser, payeePartyIdType);
@@ -343,7 +343,7 @@ public class OperationsDetailedApi {
         } else if (currentUser.getCurrenciesList().equals(Collections.singletonList("*"))) {
             // user is allowed to see data from all currencies. Check if they wanna filter for a specific currency, otherwise don't add to spec
             if (currency != null) {
-                specs.add(TransactionRequestSpecs.match(TransactionRequest_.currency, currency));
+                specs.add(TransactionRequestSpecs.like(TransactionRequest_.currency, currency));
             }
         } else {
             List<Specifications<TransactionRequest>> currencySpecs = checkUserCurrenciesAssigned(currentUser, currency);
@@ -362,7 +362,7 @@ public class OperationsDetailedApi {
         } else if (currentUser.getPayeePartyIdsList().equals(Collections.singletonList("*"))) {
             // user is allowed to see data from all dukas. Check if they wanna filter for a specific payee, otherwise don't add to spec
             if (payeePartyId != null) {
-                specs.add(TransactionRequestSpecs.match(TransactionRequest_.payeePartyId, payeePartyId));
+                specs.add(TransactionRequestSpecs.like(TransactionRequest_.payeePartyId, payeePartyId));
             }
         } else {
             List<Specifications<TransactionRequest>> dukaSpecs = checkUserDukasAssigned(currentUser, payeePartyId);
