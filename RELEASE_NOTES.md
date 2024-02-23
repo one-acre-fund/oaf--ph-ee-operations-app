@@ -8,6 +8,7 @@ Release Notes
             * [SER-1646] - Filter incoming transactions by user's assigned payeePartyIdTypes
             * [SER-1926] - Ensure the exported csv contains accurate data
             * [SER-1596] - Filter incoming transactions by the MNO reference/externalId
+            * [SER-2208] - Fix bugs in searching incoming transactions in PaymentHub Service.
         * Deployment
             * [SER-1875] - Add pipeline deployment file for Azure
         * Audit

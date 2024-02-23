@@ -237,7 +237,7 @@ public class OperationsDetailedApi {
             specs.add(TransactionRequestSpecs.match(TransactionRequest_.state, parseState(state)));
         }
         if (amount != null) {
-            specs.add(TransactionRequestSpecs.match(TransactionRequest_.amount, amount));
+            specs.add(TransactionRequestSpecs.like(TransactionRequest_.amount, amount));
         }
         if (clientCorrelationId != null) {
             specs.add(TransactionRequestSpecs.match(TransactionRequest_.clientCorrelationId, clientCorrelationId));
