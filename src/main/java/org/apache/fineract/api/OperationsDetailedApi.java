@@ -158,7 +158,7 @@ public class OperationsDetailedApi {
     private List<Specifications<Transfer>> getSearchSpecifications(String status, BigDecimal amount, String currency, String direction, String partyId, String partyIdType, String clientCorrelationId) {
         List<Specifications<Transfer>> specs = new ArrayList<>();
         if (clientCorrelationId != null) {
-            specs.add(TransferSpecs.match(Transfer_.clientCorrelationId, clientCorrelationId));
+            specs.add(TransferSpecs.like(Transfer_.clientCorrelationId, clientCorrelationId));
         }
         if (status != null && parseStatus(status) != null) {
             specs.add(TransferSpecs.match(Transfer_.status, parseStatus(status)));
