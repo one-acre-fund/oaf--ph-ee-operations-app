@@ -176,7 +176,6 @@ public class OperationsDetailedApi {
             specs.add(TransferSpecs.multiMatch(Transfer_.payeePartyIdType, Transfer_.payerPartyIdType, partyIdType));
         }
         if (partyId != null) {
-
             specs.add(getPartyIdSearchSpec(partyId));
         }
         return specs;
