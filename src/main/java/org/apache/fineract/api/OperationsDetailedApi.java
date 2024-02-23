@@ -225,10 +225,10 @@ public class OperationsDetailedApi {
             specs.add(TransactionRequestSpecs.like(TransactionRequest_.payerPartyId, payerPartyId));
         }
         if (payeeDfspId != null) {
-            specs.add(TransactionRequestSpecs.match(TransactionRequest_.payeeDfspId, payeeDfspId));
+            specs.add(TransactionRequestSpecs.like(TransactionRequest_.payeeDfspId, payeeDfspId));
         }
         if (payerDfspId != null) {
-            specs.add(TransactionRequestSpecs.match(TransactionRequest_.payerDfspId, payerDfspId));
+            specs.add(TransactionRequestSpecs.like(TransactionRequest_.payerDfspId, payerDfspId));
         }
         if (transactionId != null) {
             specs.add(TransactionRequestSpecs.like(TransactionRequest_.transactionId, transactionId));
@@ -390,7 +390,7 @@ public class OperationsDetailedApi {
 
         // user is assigned currency in the list
         if (currency != null) {
-            specs.add(TransactionRequestSpecs.match(TransactionRequest_.currency, currency));
+            specs.add(TransactionRequestSpecs.like(TransactionRequest_.currency, currency));
         } else {
             specs.add(TransactionRequestSpecs.in(TransactionRequest_.currency, currentUser.getCurrenciesList()));
         }
@@ -403,7 +403,7 @@ public class OperationsDetailedApi {
         List<Specifications<TransactionRequest>> specs = new ArrayList<>();
         // user is assigned dukas in the list
         if (payeePartyId != null) {
-            specs.add(TransactionRequestSpecs.match(TransactionRequest_.payeePartyId, payeePartyId));
+            specs.add(TransactionRequestSpecs.like(TransactionRequest_.payeePartyId, payeePartyId));
         } else {
             specs.add(TransactionRequestSpecs.in(TransactionRequest_.payeePartyId, currentUser.getPayeePartyIdsList()));
         }
@@ -415,7 +415,7 @@ public class OperationsDetailedApi {
 
         // user is assigned payeePartyIdTypes in the list
         if (payeePartyIdType != null) {
-            specs.add(TransactionRequestSpecs.match(TransactionRequest_.payeePartyIdType, payeePartyIdType));
+            specs.add(TransactionRequestSpecs.like(TransactionRequest_.payeePartyIdType, payeePartyIdType));
         } else {
             specs.add(TransactionRequestSpecs.in(TransactionRequest_.payeePartyIdType, currentUser.getPayeePartyIdTypesList()));
         }
