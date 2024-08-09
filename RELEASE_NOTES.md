@@ -1,5 +1,11 @@
 Release Notes
 
+## Version 1.1.1 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Transaction Requests
+            * [SER-2990] - Add NOT_AUTOSAVED status for transaction requests
+
 ## Version 1.1.0 - Up to date with Mifos Version 1.5.0
 
     * Payment Hub OPs
