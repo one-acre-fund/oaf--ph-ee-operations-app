@@ -19,12 +19,14 @@
 package org.apache.fineract.organisation.permission;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.fineract.config.CustomAuditingEntityListener;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.apache.fineract.organisation.role.Role;
 
 import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
 import javax.persistence.FetchType;
 import javax.persistence.ManyToMany;
 import javax.persistence.Table;
@@ -33,6 +35,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "m_permission")
+@EntityListeners(CustomAuditingEntityListener.class)
 public class Permission extends AbstractPersistableCustom<Long> {
 
     @Column(name = "grouping", nullable = false, length = 45)

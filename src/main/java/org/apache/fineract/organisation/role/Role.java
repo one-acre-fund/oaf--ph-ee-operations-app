@@ -19,6 +19,7 @@
 package org.apache.fineract.organisation.role;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import org.apache.fineract.config.CustomAuditingEntityListener;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.apache.fineract.organisation.permission.Permission;
 import org.apache.fineract.organisation.user.AppUser;
@@ -27,6 +28,7 @@ import javax.persistence.CascadeType;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
+import javax.persistence.EntityListeners;
 import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
@@ -36,6 +38,7 @@ import java.util.Objects;
 
 @Entity
 @Table(name = "m_role")
+@EntityListeners(CustomAuditingEntityListener.class)
 public class Role extends AbstractPersistableCustom<Long> {
 
     @Column(name = "name", unique = true, nullable = false, length = 100)

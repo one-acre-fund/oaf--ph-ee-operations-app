@@ -23,8 +23,13 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
+
 public interface AppUserRepository extends JpaRepository<AppUser, Long>, JpaSpecificationExecutor<AppUser> {
 
     @Query("Select appUser from AppUser appUser where appUser.username = :username")
     AppUser findAppUserByName(@Param("username") String username);
+
+    @Query("Select new org.apache.fineract.organisation.user.UserDto(appUser.id, appUser.username) from AppUser appUser")
+    List<UserDto> findAllUsers();
 }

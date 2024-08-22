@@ -1,6 +1,8 @@
 
 package org.apache.fineract.audit.data;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -37,6 +39,8 @@ public class AuditSource extends AbstractPersistableCustom<Long> {
     private AppUser maker;
 
     @Column(name = "made_on_date", nullable = false)
+    @JsonSerialize(using = com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer.class)
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime madeOnDate;
 
     @Column(name = "processing_result", nullable = false)

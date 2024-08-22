@@ -6,8 +6,12 @@ import org.apache.fineract.audit.data.AuditSource;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
+import javax.persistence.criteria.Predicate;
 
 import static org.springframework.data.jpa.domain.Specification.where;
 /**
@@ -22,18 +26,51 @@ public class AuditSpec extends BaseSpecification<AuditSource, AuditSearch> {
      * @param request The audit search criteria.
      * @return A specification for filtering audit entries.
      */
+
     @Override
     public Specification<AuditSource> getFilter(AuditSearch request) {
         return (root, query, cb) -> {
             query.distinct(true);
-            return where(
-                    where(dateBetween("madeOnDate", getExactDate(request.getMakerDateTimeFrom(), 0, 0, 0), getExactDate(request.getMakerDateTimeTo(), 23, 59, 59)))
-            ).and(fieldContains("actionName", request.getActionName()))
-                    .and(fieldContains("entityName", request.getEntityName()))
-                    .and(fieldContains("processingResult", request.getProcessingResult()))
-                    .and(fieldContains("maker", request.getMakerId()))
-                    .and(fieldContains("resourceId", request.getResourceId()))
-                    .toPredicate(root, query, cb);
+
+            List<Predicate> predicates = new ArrayList<>();
+
+            LocalDateTime startDateTime = request.getMakerDateTimeFrom() != null
+                    ? request.getMakerDateTimeFrom().withHour(0).withMinute(0).withSecond(0).withNano(0)
+                    : null;
+            LocalDateTime endDateTime = request.getMakerDateTimeTo() != null
+                    ? request.getMakerDateTimeTo().withHour(23).withMinute(59).withSecond(59).withNano(999999999)
+                    : null;
+            // If both are missing, no date filter is applied
+            if (startDateTime != null || endDateTime != null) {
+                if (startDateTime == null) {
+                    startDateTime = LocalDateTime.MIN;
+                }
+                if (endDateTime == null) {
+                    endDateTime = LocalDateTime.now();
+                }
+                predicates.add(cb.between(root.get("madeOnDate"), startDateTime, endDateTime));
+            }
+
+            // Additional filters
+            if (request.getActionName() != null) {
+                predicates.add(cb.like(cb.lower(root.get("actionName")), "%" + request.getActionName().toLowerCase() + "%"));
+            }
+            if (request.getEntityName() != null) {
+                predicates.add(cb.like(cb.lower(root.get("entityName")), "%" + request.getEntityName().toLowerCase() + "%"));
+            }
+            if (request.getProcessingResult() != null) {
+                predicates.add(cb.like(cb.lower(root.get("processingResult")), "%" + request.getProcessingResult().toLowerCase() + "%"));
+            }
+            if (request.getMakerId() != null) {
+                predicates.add(cb.equal(root.get("maker"), request.getMakerId()));
+            }
+            if (request.getResourceId() != null) {
+                predicates.add(cb.equal(root.get("resourceId"), request.getResourceId()));
+
+            }
+
+            // Combine all predicates
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
     /**
@@ -42,20 +79,19 @@ public class AuditSpec extends BaseSpecification<AuditSource, AuditSearch> {
      * @param date The input date.
      * @param hour The target hour.
      * @param minute The target minute.
-     * @param seconds The target second.
      * @return The adjusted date with the specified time of day.
      */
 
-    public static Date getExactDate(Date date, int hour, int minute, int seconds) {
-        if (date == null)
-            return null;
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(date);
-        calendar.set(Calendar.HOUR, hour);
-        calendar.set(Calendar.MINUTE, minute);
-        calendar.set(Calendar.SECOND, seconds);
-        return calendar.getTime();
+    private Date getExactDate(Date date, int hour, int minute, int second) {
+        Calendar cal = Calendar.getInstance();
+        cal.setTime(date);
+        cal.set(Calendar.HOUR_OF_DAY, hour);
+        cal.set(Calendar.MINUTE, minute);
+        cal.set(Calendar.SECOND, second);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTime();
     }
+
     /**
      * Generates a specification for filtering audit entries based on the provided attribute and string value.
      *
