@@ -11,15 +11,15 @@ import org.apache.fineract.audit.data.AuditTemplateResponse;
 import org.apache.fineract.audit.service.AuditService;
 import org.apache.fineract.audit.data.AuditSource;
 import org.apache.fineract.audit.specs.AuditSpec;
+import org.apache.fineract.utils.DateUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.Objects;
 
 
@@ -53,10 +53,10 @@ public class AuditApiResource {
         LocalDateTime parsedMakerDateTo = null;
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
         if(Objects.nonNull(makerDateTimeFrom)) {
-            parsedMakerDateFrom = parseDateTime(makerDateTimeFrom, formatter);
+            parsedMakerDateFrom = DateUtil.parseDateTime(makerDateTimeFrom, formatter);
         }
         if(Objects.nonNull(makerDateTimeTo)) {
-            parsedMakerDateTo = parseDateTime(makerDateTimeTo, formatter);
+            parsedMakerDateTo = DateUtil.parseDateTime(makerDateTimeTo, formatter);
         }
 
         AuditSearch search = new AuditSearch(actionName, entityName, resourceId, makerId, parsedMakerDateFrom, parsedMakerDateTo, processingResult);
@@ -75,16 +75,5 @@ public class AuditApiResource {
     @GetMapping("/{id}")
     public AuditSource getAudit(@PathVariable("id") Long id) {
         return this.auditService.findById(id);
-    }
-
-    private LocalDateTime parseDateTime(String dateTimeStr, DateTimeFormatter formatter) {
-        try {
-            // Attempt to parse as LocalDateTime
-            return LocalDateTime.parse(dateTimeStr, formatter);
-        } catch (DateTimeParseException e) {
-            // If parsing as LocalDateTime fails, try parsing as LocalDate and convert to LocalDateTime
-            LocalDate date = LocalDate.parse(dateTimeStr, formatter);
-            return date.atStartOfDay();
-        }
     }
 }
