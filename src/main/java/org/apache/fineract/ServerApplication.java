@@ -37,6 +37,7 @@ import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
@@ -67,6 +68,7 @@ import java.util.stream.Collectors;
         FlywayAutoConfiguration.class,
         ErrorMvcAutoConfiguration.class})
 @EnableJsonWebSignature
+@EnableJpaAuditing
 public class ServerApplication {
 
     /**

@@ -19,14 +19,17 @@
 package org.apache.fineract.organisation.tenant;
 
 
+import org.apache.fineract.config.CustomAuditingEntityListener;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
 import javax.persistence.Table;
 
 @Entity
 @Table(name = "tenant_server_connections")
+@EntityListeners(CustomAuditingEntityListener.class)
 public class TenantServerConnection extends AbstractPersistableCustom<Long> {
 
     @Column(name = "schema_server")

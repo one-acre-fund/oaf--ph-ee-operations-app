@@ -1,4 +1,9 @@
 Release Notes
+## Version 1.1.2 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Audits
+            * [SER-2070] - Setup audit of user actions + add jpa auditing
 
 ## Version 1.1.1 - Up to date with Mifos Version 1.5.0
 

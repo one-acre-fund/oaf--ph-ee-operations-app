@@ -6,8 +6,14 @@ import org.apache.fineract.audit.data.AuditSource;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
+import javax.persistence.criteria.CriteriaBuilder;
+import javax.persistence.criteria.Predicate;
+import javax.persistence.criteria.Root;
 
 import static org.springframework.data.jpa.domain.Specification.where;
 /**
@@ -26,36 +32,67 @@ public class AuditSpec extends BaseSpecification<AuditSource, AuditSearch> {
     public Specification<AuditSource> getFilter(AuditSearch request) {
         return (root, query, cb) -> {
             query.distinct(true);
-            return where(
-                    where(dateBetween("madeOnDate", getExactDate(request.getMakerDateTimeFrom(), 0, 0, 0), getExactDate(request.getMakerDateTimeTo(), 23, 59, 59)))
-            ).and(fieldContains("actionName", request.getActionName()))
-                    .and(fieldContains("entityName", request.getEntityName()))
-                    .and(fieldContains("processingResult", request.getProcessingResult()))
-                    .and(fieldContains("maker", request.getMakerId()))
-                    .and(fieldContains("resourceId", request.getResourceId()))
-                    .toPredicate(root, query, cb);
+            List<Predicate> predicates = new ArrayList<>();
+
+            addDateFilterPredicates(request, root, cb, predicates);
+            addActionNameFilterPredicate(request, root, cb, predicates);
+            addEntityNameFilterPredicate(request, root, cb, predicates);
+            addProcessingResultFilterPredicate(request, root, cb, predicates);
+            addMakerIdFilterPredicate(request, root, cb, predicates);
+            addResourceIdFilterPredicate(request, root, cb, predicates);
+
+            return cb.and(predicates.toArray(new Predicate[0]));
         };
     }
-    /**
-     * Gets a date adjusted to a specific time of day.
-     *
-     * @param date The input date.
-     * @param hour The target hour.
-     * @param minute The target minute.
-     * @param seconds The target second.
-     * @return The adjusted date with the specified time of day.
-     */
 
-    public static Date getExactDate(Date date, int hour, int minute, int seconds) {
-        if (date == null)
-            return null;
-        Calendar calendar = Calendar.getInstance();
-        calendar.setTime(date);
-        calendar.set(Calendar.HOUR, hour);
-        calendar.set(Calendar.MINUTE, minute);
-        calendar.set(Calendar.SECOND, seconds);
-        return calendar.getTime();
+    private void addDateFilterPredicates(AuditSearch request, Root<AuditSource> root, CriteriaBuilder cb, List<Predicate> predicates) {
+        LocalDateTime startDateTime = request.getMakerDateTimeFrom() != null
+                ? request.getMakerDateTimeFrom().withHour(0).withMinute(0).withSecond(0).withNano(0)
+                : null;
+        LocalDateTime endDateTime = request.getMakerDateTimeTo() != null
+                ? request.getMakerDateTimeTo().withHour(23).withMinute(59).withSecond(59).withNano(999999999)
+                : null;
+        if (startDateTime != null || endDateTime != null) {
+            if (startDateTime == null) {
+                startDateTime = LocalDateTime.MIN;
+            }
+            if (endDateTime == null) {
+                endDateTime = LocalDateTime.now();
+            }
+            predicates.add(cb.between(root.get("madeOnDate"), startDateTime, endDateTime));
+        }
     }
+
+    private void addActionNameFilterPredicate(AuditSearch request, Root<AuditSource> root, CriteriaBuilder cb, List<Predicate> predicates) {
+        if (request.getActionName() != null) {
+            predicates.add(cb.like(cb.lower(root.get("actionName")), "%" + request.getActionName().toLowerCase() + "%"));
+        }
+    }
+
+    private void addEntityNameFilterPredicate(AuditSearch request, Root<AuditSource> root, CriteriaBuilder cb, List<Predicate> predicates) {
+        if (request.getEntityName() != null) {
+            predicates.add(cb.like(cb.lower(root.get("entityName")), "%" + request.getEntityName().toLowerCase() + "%"));
+        }
+    }
+
+    private void addProcessingResultFilterPredicate(AuditSearch request, Root<AuditSource> root, CriteriaBuilder cb, List<Predicate> predicates) {
+        if (request.getProcessingResult() != null) {
+            predicates.add(cb.like(cb.lower(root.get("processingResult")), "%" + request.getProcessingResult().toLowerCase() + "%"));
+        }
+    }
+
+    private void addMakerIdFilterPredicate(AuditSearch request, Root<AuditSource> root, CriteriaBuilder cb, List<Predicate> predicates) {
+        if (request.getMakerId() != null) {
+            predicates.add(cb.equal(root.get("maker"), request.getMakerId()));
+        }
+    }
+
+    private void addResourceIdFilterPredicate(AuditSearch request, Root<AuditSource> root, CriteriaBuilder cb, List<Predicate> predicates) {
+        if (request.getResourceId() != null) {
+            predicates.add(cb.equal(root.get("resourceId"), request.getResourceId()));
+        }
+    }
+
     /**
      * Generates a specification for filtering audit entries based on the provided attribute and string value.
      *

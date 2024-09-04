@@ -19,6 +19,8 @@
 package org.apache.fineract.organisation.user;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.ToString;
+import org.apache.fineract.config.CustomAuditingEntityListener;
 import org.apache.fineract.organisation.office.Office;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.apache.fineract.organisation.permission.Permission;
@@ -33,6 +35,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Entity
+@ToString
+@EntityListeners(CustomAuditingEntityListener.class)
 @Table(name = "m_appuser")
 public class AppUser extends AbstractPersistableCustom<Long> implements UserDetails {
 
@@ -79,6 +83,7 @@ public class AppUser extends AbstractPersistableCustom<Long> implements UserDeta
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.REFRESH, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "m_appuser_role", joinColumns = @JoinColumn(name = "appuser_id"), inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @ToString.Exclude
     private Collection<Role> roles;
 
     @Column(name = "last_time_password_updated")

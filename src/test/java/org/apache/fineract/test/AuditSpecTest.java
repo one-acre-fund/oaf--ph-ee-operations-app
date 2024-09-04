@@ -13,7 +13,7 @@ import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 import static org.mockito.Mockito.mock;
 
@@ -28,7 +28,7 @@ class AuditSpecTest {
 
     @Test
     void testGetFilter() {
-        AuditSearch auditSearch = new AuditSearch("CREATE", "AppUser", 1L, 1L, new Date(), new Date(), "SUCCESS");
+        AuditSearch auditSearch = new AuditSearch("CREATE", "AppUser", 1L, 1L, LocalDateTime.now(), LocalDateTime.now(), "SUCCESS");
         Specification<AuditSource> specification = auditSpec.getFilter(auditSearch);
         Assertions.assertNotNull(specification);
     }
