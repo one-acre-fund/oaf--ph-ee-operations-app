@@ -29,7 +29,6 @@ import javax.persistence.Table;
 
 @Entity
 @Table(name = "tenant_server_connections")
-@EntityListeners(CustomAuditingEntityListener.class)
 public class TenantServerConnection extends AbstractPersistableCustom<Long> {
 
     @Column(name = "schema_server")
