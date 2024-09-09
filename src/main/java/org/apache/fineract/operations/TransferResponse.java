@@ -8,6 +8,7 @@ import org.apache.commons.lang3.StringEscapeUtils;
 import org.mifos.connector.common.channel.dto.PhErrorDTO;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Getter
@@ -42,6 +43,10 @@ public class TransferResponse {
     private PhErrorDTO errorInformation;
     private String batchId;
     private String clientCorrelationId;
+    private LocalDateTime createdDate;
+    private LocalDateTime lastModifiedDate;
+    private String createdBy;
+    private String lastModifiedBy;
 
     public void parseErrorInformation(String json, ObjectMapper mapper) throws IOException {
         try {
