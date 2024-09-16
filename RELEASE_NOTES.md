@@ -1,4 +1,11 @@
 Release Notes
+
+## Version 1.1.4 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Audits
+            * [SER-3117] - Add audit fields on variables table
+
 ## Version 1.1.3 - Up to date with Mifos Version 1.5.0
 
     * Payment Hub OPs
