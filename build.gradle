@@ -16,8 +16,9 @@ repositories {
     }
 
     maven {
-        url = uri('https://mifos.jfrog.io/ui/native/phee-gradle-local')
+        url = uri("https://secure-api.oneacrefund.org/s3/artifacts")
     }
+
 }
 
 dependencies {
@@ -46,7 +47,7 @@ dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
     implementation "org.springdoc:springdoc-openapi-ui:1.6.11"
-    implementation 'org.mifos:ph-ee-connector-common:1.8.1'
+    implementation 'org.mifos:ph-ee-connector-common:1.4.0-SNAPSHOT'
 
     testImplementation 'org.mockito:mockito-core:3.12.4'
 }
