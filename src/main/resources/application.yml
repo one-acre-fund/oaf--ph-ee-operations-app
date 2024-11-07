@@ -85,3 +85,14 @@ application:
 
 ams:
   sources: '[{"name": "TUPANDE ACCOUNT", "id": "TUPANDEACCOUNTID"}]'
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true

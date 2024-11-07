@@ -23,6 +23,8 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.security:spring-security-jwt:1.1.0.RELEASE'
+    implementation('org.springframework.boot:spring-boot-starter-actuator:2.6.2')
+    implementation 'io.micrometer:micrometer-registry-prometheus:1.1.9'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
@@ -76,9 +78,6 @@ publishing {
 tasks.withType(JavaCompile) {
     options.encoding = 'UTF-8'
     options.annotationProcessorGeneratedSourcesDirectory = file("src/generated/java")
-}
-test {
-    useJUnitPlatform()
 }
 
 tasks.register('printVersion') {
