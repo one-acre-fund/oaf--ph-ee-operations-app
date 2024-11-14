@@ -30,7 +30,7 @@ public class TransferResponse {
     private BigDecimal payeeFee;
     private String payeeFeeCurrency;
     private String payeeQuoteCode;
-    private String payerDfspId;
+    private String amsBusinessShortCode;
     private String payerPartyId;
     private String payerPartyIdType;
     private BigDecimal payerFee;

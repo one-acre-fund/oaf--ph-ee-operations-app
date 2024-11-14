@@ -276,7 +276,7 @@ public class BatchApi {
                 oneLine.append(CSV_SEPARATOR);
                 oneLine.append(transfer.getPayeePartyId());
                 oneLine.append(CSV_SEPARATOR);
-                oneLine.append(transfer.getPayerDfspId());
+                oneLine.append(transfer.getAmsBusinessShortCode());
                 oneLine.append(CSV_SEPARATOR);
                 oneLine.append(transfer.getPayerPartyId());
                 oneLine.append(CSV_SEPARATOR);

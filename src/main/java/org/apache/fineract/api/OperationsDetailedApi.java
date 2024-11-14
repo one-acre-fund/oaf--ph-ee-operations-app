@@ -69,9 +69,9 @@ public class OperationsDetailedApi {
     }
 
     @GetMapping("/transfers")
-    public Page<TransferResponse> transfers(@RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "20") Integer size, @RequestParam(value = "payerPartyId", required = false) String payerPartyId, @RequestParam(value = "payerDfspId", required = false) String payerDfspId, @RequestParam(value = "payeePartyId", required = false) String payeePartyId, @RequestParam(value = "payeeDfspId", required = false) String payeeDfspId, @RequestParam(value = "transactionId", required = false) String transactionId, @RequestParam(value = "status", required = false) String status, @RequestParam(value = "amount", required = false) BigDecimal amount, @RequestParam(value = "currency", required = false) String currency, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "direction", required = false) String direction, @RequestParam(value = "sortedBy", required = false) String sortedBy, @RequestParam(value = "partyId", required = false) String partyId, @RequestParam(value = "partyIdType", required = false) String partyIdType, @RequestParam(value = "clientCorrelationId", required = false) String clientCorrelationId, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder) {
+    public Page<TransferResponse> transfers(@RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "20") Integer size, @RequestParam(value = "payerPartyId", required = false) String payerPartyId, @RequestParam(value = "payerDfspId", required = false) String amsBusinessShortCode, @RequestParam(value = "payeePartyId", required = false) String payeePartyId, @RequestParam(value = "payeeDfspId", required = false) String payeeDfspId, @RequestParam(value = "transactionId", required = false) String transactionId, @RequestParam(value = "status", required = false) String status, @RequestParam(value = "amount", required = false) BigDecimal amount, @RequestParam(value = "currency", required = false) String currency, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "direction", required = false) String direction, @RequestParam(value = "sortedBy", required = false) String sortedBy, @RequestParam(value = "partyId", required = false) String partyId, @RequestParam(value = "partyIdType", required = false) String partyIdType, @RequestParam(value = "clientCorrelationId", required = false) String clientCorrelationId, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder) {
         List<Specifications<Transfer>> specs = getSearchSpecifications(status, amount, currency, direction, partyId, partyIdType, clientCorrelationId);
-        specs.addAll(getSearchSpecification(payerPartyId, payerDfspId, payeeDfspId, payeePartyId, transactionId));
+        specs.addAll(getSearchSpecification(payerPartyId, amsBusinessShortCode, payeeDfspId, payeePartyId, transactionId));
 
         specs.addAll(getDateSearchSpecs(startFrom, startTo));
 
@@ -148,7 +148,7 @@ public class OperationsDetailedApi {
         return specs;
     }
 
-    private List<Specifications<Transfer>> getSearchSpecification(String payerPartyId, String payerDfspId, String payeeDfspId, String payeePartyId, String transactionId) {
+    private List<Specifications<Transfer>> getSearchSpecification(String payerPartyId, String amsBusinessShortCode, String payeeDfspId, String payeePartyId, String transactionId) {
         List<Specifications<Transfer>> specs = new ArrayList<>();
         if (payerPartyId != null) {
             specs.add(getPayerPartyIdSearchSpec(payerPartyId));
@@ -159,8 +159,8 @@ public class OperationsDetailedApi {
         if (payeeDfspId != null) {
             specs.add(TransferSpecs.match(Transfer_.payeeDfspId, payeeDfspId));
         }
-        if (payerDfspId != null) {
-            specs.add(TransferSpecs.match(Transfer_.payerDfspId, payerDfspId));
+        if (amsBusinessShortCode != null) {
+            specs.add(TransferSpecs.match(Transfer_.amsBusinessShortCode, amsBusinessShortCode));
         }
         if (transactionId != null) {
             specs.add(TransferSpecs.match(Transfer_.transactionId, transactionId));
@@ -231,7 +231,7 @@ public class OperationsDetailedApi {
     }
 
     @GetMapping("/transactionRequests")
-    public Page<TransactionRequest> transactionRequests(@RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "20") Integer size, @RequestParam(value = "payerPartyId", required = false) String payerPartyId, @RequestParam(value = "payeePartyId", required = false) String payeePartyId, @RequestParam(value = "payeePartyIdType", required = false) String payeePartyIdType, @RequestParam(value = "payeeDfspId", required = false) String payeeDfspId, @RequestParam(value = "payerDfspId", required = false) String payerDfspId, @RequestParam(value = "transactionId", required = false) String transactionId, @RequestParam(value = "state", required = false) String state, @RequestParam(value = "amount", required = false) BigDecimal amount, @RequestParam(value = "currency", required = false) String currency, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "direction", required = false) String direction, @RequestParam(value = "clientCorrelationId", required = false) String clientCorrelationId,@RequestParam(value = "externalId", required = false) String externalId, @RequestParam(value = "sortedBy", required = false) String sortedBy, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder) {
+    public Page<TransactionRequest> transactionRequests(@RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "20") Integer size, @RequestParam(value = "payerPartyId", required = false) String payerPartyId, @RequestParam(value = "payeePartyId", required = false) String payeePartyId, @RequestParam(value = "payeePartyIdType", required = false) String payeePartyIdType, @RequestParam(value = "payeeDfspId", required = false) String payeeDfspId, @RequestParam(value = "payerDfspId", required = false) String amsBusinessShortCode, @RequestParam(value = "transactionId", required = false) String transactionId, @RequestParam(value = "state", required = false) String state, @RequestParam(value = "amount", required = false) BigDecimal amount, @RequestParam(value = "currency", required = false) String currency, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "direction", required = false) String direction, @RequestParam(value = "clientCorrelationId", required = false) String clientCorrelationId,@RequestParam(value = "externalId", required = false) String externalId, @RequestParam(value = "sortedBy", required = false) String sortedBy, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder) {
         List<Specifications<TransactionRequest>> specs = new ArrayList<>();
         if (payerPartyId != null) {
             specs.add(TransactionRequestSpecs.like(TransactionRequest_.payerPartyId, payerPartyId));
@@ -239,8 +239,8 @@ public class OperationsDetailedApi {
         if (payeeDfspId != null) {
             specs.add(TransactionRequestSpecs.like(TransactionRequest_.payeeDfspId, payeeDfspId));
         }
-        if (payerDfspId != null) {
-            specs.add(TransactionRequestSpecs.like(TransactionRequest_.payerDfspId, payerDfspId));
+        if (amsBusinessShortCode != null) {
+            specs.add(TransactionRequestSpecs.like(TransactionRequest_.amsBusinessShortCode, amsBusinessShortCode));
         }
         if (transactionId != null) {
             specs.add(TransactionRequestSpecs.like(TransactionRequest_.transactionId, transactionId));
@@ -579,8 +579,8 @@ public class OperationsDetailedApi {
             case CLIENTCORRELATIONID:
                 spec = TransactionRequestSpecs.in(TransactionRequest_.clientCorrelationId, listOfValues);
                 break;
-            case PAYERDFSPID:
-                spec = TransactionRequestSpecs.in(TransactionRequest_.payerDfspId, listOfValues);
+            case AMSBUSINESSSHORTCODE:
+                spec = TransactionRequestSpecs.in(TransactionRequest_.amsBusinessShortCode, listOfValues);
                 break;
         }
         return spec;
@@ -731,8 +731,8 @@ public class OperationsDetailedApi {
             case CLIENTCORRELATIONID:
                 spec = TransferSpecs.in(Transfer_.clientCorrelationId, listOfValues);
                 break;
-            case PAYERDFSPID:
-                spec = TransferSpecs.in(Transfer_.payerDfspId, listOfValues);
+            case AMSBUSINESSSHORTCODE:
+                spec = TransferSpecs.in(Transfer_.amsBusinessShortCode, listOfValues);
                 break;
         }
         return spec;

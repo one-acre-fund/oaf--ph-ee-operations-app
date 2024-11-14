@@ -45,8 +45,8 @@ public class TransactionRequest extends AbstractPersistableCustom<Long> {
     @Column(name = "PAYEE_QUOTE_CODE")
     private String payeeQuoteCode;
 
-    @Column(name = "PAYER_DFSP_ID")
-    private String payerDfspId;
+    @Column(name = "AMS_BUSINESS_SHORT_CODE")
+    private String amsBusinessShortCode;
     @Column(name = "PAYER_PARTY_ID")
     private String payerPartyId;
     @Column(name = "PAYER_PARTY_ID_TYPE")
@@ -192,12 +192,12 @@ public class TransactionRequest extends AbstractPersistableCustom<Long> {
         this.payeeQuoteCode = payeeQuoteCode;
     }
 
-    public String getPayerDfspId() {
-        return payerDfspId;
+    public String getAmsBusinessShortCode() {
+        return amsBusinessShortCode;
     }
 
-    public void setPayerDfspId(String payerDfspId) {
-        this.payerDfspId = payerDfspId;
+    public void setAmsBusinessShortCode(String amsBusinessShortCode) {
+        this.amsBusinessShortCode = amsBusinessShortCode;
     }
 
     public String getPayerPartyId() {
@@ -309,7 +309,7 @@ public class TransactionRequest extends AbstractPersistableCustom<Long> {
                 ", payeePartyIdType='" + payeePartyIdType + '\'' +
                 ", payeeFee=" + payeeFee +
                 ", payeeQuoteCode='" + payeeQuoteCode + '\'' +
-                ", payerDfspId='" + payerDfspId + '\'' +
+                ", amsBusinessShortCode='" + amsBusinessShortCode + '\'' +
                 ", payerPartyId='" + payerPartyId + '\'' +
                 ", payerPartyIdType='" + payerPartyIdType + '\'' +
                 ", payerFee=" + payerFee +
