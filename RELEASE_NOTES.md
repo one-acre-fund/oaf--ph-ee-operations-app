@@ -1,12 +1,16 @@
 Release Notes
 
+## Version 1.1.5 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Transaction Requests
+            * [SER-3003] - Rename Payer DFSP Id to ‘AMS Business Short Code’ 
+
 ## Version 1.1.4 - Up to date with Mifos Version 1.5.0
 
     * Payment Hub OPs
         * Audits
             * [SER-3117] - Add audit fields on variables table
-        * Transaction Requests
-            * [SER-3003] - Rename Payer DFSP Id to ‘AMS Business Short Code’ 
 
 ## Version 1.1.3 - Up to date with Mifos Version 1.5.0
 
