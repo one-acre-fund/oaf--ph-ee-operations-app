@@ -160,7 +160,7 @@ public class OperationsDetailedApi {
             specs.add(TransferSpecs.match(Transfer_.payeeDfspId, payeeDfspId));
         }
         if (payerDfspId != null) {
-            specs.add(TransferSpecs.match(Transfer_.payerDfspId, payerDfspId));
+            specs.add(TransferSpecs.match(Transfer_.amsBusinessShortCode, payerDfspId));
         }
         if (transactionId != null) {
             specs.add(TransferSpecs.match(Transfer_.transactionId, transactionId));
@@ -240,7 +240,7 @@ public class OperationsDetailedApi {
             specs.add(TransactionRequestSpecs.like(TransactionRequest_.payeeDfspId, payeeDfspId));
         }
         if (payerDfspId != null) {
-            specs.add(TransactionRequestSpecs.like(TransactionRequest_.payerDfspId, payerDfspId));
+            specs.add(TransactionRequestSpecs.like(TransactionRequest_.amsBusinessShortCode, payerDfspId));
         }
         if (transactionId != null) {
             specs.add(TransactionRequestSpecs.like(TransactionRequest_.transactionId, transactionId));
@@ -580,7 +580,7 @@ public class OperationsDetailedApi {
                 spec = TransactionRequestSpecs.in(TransactionRequest_.clientCorrelationId, listOfValues);
                 break;
             case PAYERDFSPID:
-                spec = TransactionRequestSpecs.in(TransactionRequest_.payerDfspId, listOfValues);
+                spec = TransactionRequestSpecs.in(TransactionRequest_.amsBusinessShortCode, listOfValues);
                 break;
         }
         return spec;
@@ -732,7 +732,7 @@ public class OperationsDetailedApi {
                 spec = TransferSpecs.in(Transfer_.clientCorrelationId, listOfValues);
                 break;
             case PAYERDFSPID:
-                spec = TransferSpecs.in(Transfer_.payerDfspId, listOfValues);
+                spec = TransferSpecs.in(Transfer_.amsBusinessShortCode, listOfValues);
                 break;
         }
         return spec;
