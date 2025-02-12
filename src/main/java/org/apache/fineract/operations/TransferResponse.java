@@ -47,6 +47,7 @@ public class TransferResponse {
     private LocalDateTime lastModifiedDate;
     private String createdBy;
     private String lastModifiedBy;
+    private String amsBusinessShortCode;
 
     public void parseErrorInformation(String json, ObjectMapper mapper) throws IOException {
         try {

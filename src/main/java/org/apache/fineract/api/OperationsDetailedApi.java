@@ -91,6 +91,7 @@ public class OperationsDetailedApi {
                 String json = transfer.getErrorInformation();
                 transfer.setErrorInformation(null);
                 transferResponse = objectMapper.readValue(objectMapper.writeValueAsString(transfer), TransferResponse.class);
+                transferResponse.setPayerDfspId(transfer.getAmsBusinessShortCode());
                 transferResponse.parseErrorInformation(json, objectMapper);
                 transferResponseList.add(transferResponse);
             } catch (Exception e) {
