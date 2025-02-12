@@ -1,5 +1,12 @@
 Release Notes
 
+
+## Version 1.1.6 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Transaction Requests
+            * [CP-3399] - Fix issue with payments incomming transactions not being returned
+
 ## Version 1.1.5 - Up to date with Mifos Version 1.5.0
 
     * Payment Hub OPs

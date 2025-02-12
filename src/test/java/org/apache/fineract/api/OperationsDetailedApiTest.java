@@ -18,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.domain.Specifications;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -110,6 +111,39 @@ class OperationsDetailedApiTest {
         assertNotNull(result);
         Assertions.assertEquals(1, result.getTotalElements());
         Assertions.assertEquals("12345", result.getContent().get(0).getTransactionId());
+    }
+    @DisplayName("Returns a page of TransferResponse objects with the payerDfspId when valid parameters are provided")
+    @Test
+    void test_returns_page_of_transfer_with_filters() throws IOException {
+        // Arrange
+        PageRequest pager = PageRequest.of(0, 20, Sort.by(Sort.Direction.DESC, "startedAt"));
+        Transfer transfer = new Transfer();
+        transfer.setTransactionId("12345");
+        transfer.setAmsBusinessShortCode("1234");
+        transfer.setAmount(new BigDecimal("100.00"));
+        transfer.setCurrency("USD");
+        transfer.setStatus(TransferStatus.COMPLETED);
+        Page<Transfer> transferPage = new PageImpl<>(Collections.singletonList(transfer), pager, 1);
+
+
+        TransferResponse transferResponse = new TransferResponse();
+        transferResponse.setAmount(new BigDecimal("100.00"));
+        transferResponse.setTransactionId("12345");
+        when(transferRepository.findAll(any(Specification.class), any(PageRequest.class)))
+                .thenReturn(transferPage);
+        Mockito.when(objectMapper.writeValueAsString(transfer))
+                .thenReturn("{\"transactionId\":\"12345\",\"amount\":100.00,\"currency\":\"USD\",\"status\":\"COMPLETED\"}");
+        Mockito.when(objectMapper.readValue(anyString(), eq(TransferResponse.class)))
+                .thenReturn(transferResponse);
+
+        // Act
+        Page<TransferResponse> result = operationsDetailedApi.transfers(0, 20, null, "1234", null, null, null, null, null, null, null, null, null, null, null, null, null,"desc");
+
+        // Assert
+        assertNotNull(result);
+        Assertions.assertEquals(1, result.getTotalElements());
+        Assertions.assertEquals("12345", result.getContent().get(0).getTransactionId());
+        Assertions.assertEquals("1234", result.getContent().get(0).getPayerDfspId());
     }
 
     @DisplayName("Returns a page of transaction requests when user is authenticated and has valid assignments")

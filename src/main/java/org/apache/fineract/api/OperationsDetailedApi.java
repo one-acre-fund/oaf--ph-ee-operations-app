@@ -1,5 +1,6 @@
 package org.apache.fineract.api;
 
+import com.amazonaws.util.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -91,6 +92,10 @@ public class OperationsDetailedApi {
                 String json = transfer.getErrorInformation();
                 transfer.setErrorInformation(null);
                 transferResponse = objectMapper.readValue(objectMapper.writeValueAsString(transfer), TransferResponse.class);
+                String businessShortCode = transfer.getAmsBusinessShortCode();
+                if (!StringUtils.isNullOrEmpty(businessShortCode)) {
+                    transferResponse.setPayerDfspId(businessShortCode);
+                }
                 transferResponse.parseErrorInformation(json, objectMapper);
                 transferResponseList.add(transferResponse);
             } catch (Exception e) {
