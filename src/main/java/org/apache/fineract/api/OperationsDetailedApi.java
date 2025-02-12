@@ -3,6 +3,7 @@ package org.apache.fineract.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jdk.internal.joptsimple.internal.Strings;
 import org.apache.fineract.data.ErrorResponse;
 import org.apache.fineract.exception.WriteToCsvException;
 import org.apache.fineract.operations.*;
@@ -91,6 +92,10 @@ public class OperationsDetailedApi {
                 String json = transfer.getErrorInformation();
                 transfer.setErrorInformation(null);
                 transferResponse = objectMapper.readValue(objectMapper.writeValueAsString(transfer), TransferResponse.class);
+                String businessShortCode = transfer.getAmsBusinessShortCode();
+                if (!Strings.isNullOrEmpty(businessShortCode)) {
+                    transferResponse.setPayerDfspId(businessShortCode);
+                }
                 transferResponse.setPayerDfspId(transfer.getAmsBusinessShortCode());
                 transferResponse.parseErrorInformation(json, objectMapper);
                 transferResponseList.add(transferResponse);
