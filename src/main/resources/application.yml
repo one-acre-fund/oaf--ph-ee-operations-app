@@ -1,11 +1,11 @@
 fineract:
   datasource:
     core:
-      host: localhost
+      host: operations-mysql
       port: 3306
       schema: tenants
-      username: mysqliadmin
-      password: ThukuAdmin1
+      username: root
+      password: mysql
     common:
       protocol: jdbc
       subprotocol: mysql
@@ -100,12 +100,6 @@ application:
 
 ams:
   sources: '[{"name": "TUPANDE ACCOUNT", "id": "TUPANDEACCOUNTID"}]'
-
-channel-connector:
-  url: http://bb-connector-channel.mifos.io
-  transfer-path: /channel/transfer
-
-tenants: "oaf"
 
 springdoc:
   swagger-ui:
