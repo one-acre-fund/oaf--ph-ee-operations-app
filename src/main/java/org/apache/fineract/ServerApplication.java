@@ -79,14 +79,6 @@ public class ServerApplication {
         return new BCryptPasswordEncoder();
     }
 
-//    @Bean
-//    public DaoAuthenticationProvider customAuthenticationProvider(PasswordEncoder passwordEncoder,
-//                                                                  UserDetailsService userDetailsService) {
-//        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-//        provider.setUserDetailsService(userDetailsService);
-//        provider.setPasswordEncoder(passwordEncoder);
-//        return provider;
-//    }
 
     @Bean
     public FilterRegistrationBean tenantFilter(TenantServerConnectionRepository repository) {
@@ -111,13 +103,6 @@ public class ServerApplication {
         bean.setOrder(securityFilterOrder - 5);
         return bean;
     }
-
-//    @Bean
-//    public AuthenticationManager authenticationManager(DaoAuthenticationProvider customAuthenticationProvider) {
-//        List<AuthenticationProvider> providers = new ArrayList<>();
-//        providers.add(customAuthenticationProvider);
-//        return new ProviderManager(providers);
-//    }
 
     public static void main(String[] args) throws Exception {
         SpringApplication.run(ServerApplication.class, args);

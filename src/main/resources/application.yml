@@ -36,6 +36,13 @@ security:
   jws:
     enable: false
 
+keycloak:
+  realm: ${KEYCLOAK_REALM:OneAcreFund}
+  auth-server-url: ${KEYCLOAK_BASE_URL:https://accounts.integration.oneacrefund.org}
+  resource: ${KEYCLOAK_CLIENT_ID:fineract}
+  bearer-only: true
+  ssl-required: none
+
 spring:
   resources:
     add-mappings: false
@@ -48,8 +55,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          jwk-set-uri: ${FINERACT_KEYCLOAK_INTEGRATION:https://secure-api.qa.oneacrefund.org/realms/fineract/protocol/openid-connect/certs}
-#          issuer-uri: ${FINERACT_KEYCLOAK_INTEGRATION:https://secure-api.qa.oneacrefund.org/realms/fineract}
+          jwk-set-uri: ${keycloak.auth-server-url}/realms/${keycloak.realm}/protocol/openid-connect/certs
     whitelist:
 
 server:
@@ -100,3 +106,12 @@ channel-connector:
   transfer-path: /channel/transfer
 
 tenants: "oaf"
+
+springdoc:
+  swagger-ui:
+    oauth:
+      client-id: ${KEYCLOAK_CLIENT_ID:fineract}
+      realm: ${KEYCLOAK_REALM:fineract}
+      app-name: Payment Hub
+      use-pkce-with-authorization-code-grant: true
+    oauth2-redirect-url: ${FINERACT_SWAGGER_REDIRECT_URL:http://localhost:5050/swagger-ui/oauth2-redirect.html}

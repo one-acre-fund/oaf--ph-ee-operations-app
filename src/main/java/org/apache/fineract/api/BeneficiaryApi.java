@@ -13,7 +13,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.util.List;
 
 @RestController
-@SecurityRequirement(name = "auth")
+@SecurityRequirement(name = "BearerAuth")
 @RequestMapping("/api/v1")
 public class BeneficiaryApi {
 
