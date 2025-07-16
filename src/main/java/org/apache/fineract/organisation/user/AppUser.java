@@ -328,4 +328,11 @@ public class AppUser extends AbstractPersistableCustom<Long> implements UserDeta
     public int hashCode() {
         return Objects.hash(username);
     }
+
+    public void updateRoles(final Set<Role> allRoles) {
+        if (!allRoles.isEmpty()) {
+            this.roles.clear();
+            this.roles = allRoles;
+        }
+    }
 }

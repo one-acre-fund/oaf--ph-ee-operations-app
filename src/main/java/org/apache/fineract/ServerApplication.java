@@ -19,7 +19,6 @@
 package org.apache.fineract;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.fineract.core.service.AudienceVerifier;
 import org.apache.fineract.core.service.TenantAwareHeaderFilter;
 import org.apache.fineract.organisation.tenant.TenantServerConnectionRepository;
 import org.mifos.connector.common.interceptor.annotation.EnableJsonWebSignature;
@@ -35,8 +34,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
@@ -44,21 +41,12 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.provider.token.DefaultTokenServices;
-import org.springframework.security.oauth2.provider.token.TokenStore;
-import org.springframework.security.oauth2.provider.token.store.JwtAccessTokenConverter;
-import org.springframework.security.oauth2.provider.token.store.JwtTokenStore;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @SpringBootApplication
 @EnableConfigurationProperties
@@ -91,14 +79,14 @@ public class ServerApplication {
         return new BCryptPasswordEncoder();
     }
 
-    @Bean
-    public DaoAuthenticationProvider customAuthenticationProvider(PasswordEncoder passwordEncoder,
-                                                                  UserDetailsService userDetailsService) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
-        provider.setUserDetailsService(userDetailsService);
-        provider.setPasswordEncoder(passwordEncoder);
-        return provider;
-    }
+//    @Bean
+//    public DaoAuthenticationProvider customAuthenticationProvider(PasswordEncoder passwordEncoder,
+//                                                                  UserDetailsService userDetailsService) {
+//        DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+//        provider.setUserDetailsService(userDetailsService);
+//        provider.setPasswordEncoder(passwordEncoder);
+//        return provider;
+//    }
 
     @Bean
     public FilterRegistrationBean tenantFilter(TenantServerConnectionRepository repository) {
@@ -124,42 +112,12 @@ public class ServerApplication {
         return bean;
     }
 
-    @Bean
-    @Primary
-    public TokenStore tokenStore(JwtAccessTokenConverter accessTokenConverter) {
-        return new JwtTokenStore(accessTokenConverter);
-    }
-
-    @Bean
-    @Primary
-    public DefaultTokenServices tokenServices(TokenStore tokenStore) {
-        DefaultTokenServices service = new DefaultTokenServices();
-        service.setTokenStore(tokenStore);
-        return service;
-    }
-
-    @Bean
-    @Primary
-    public JwtAccessTokenConverter accessTokenConverter(AudienceVerifier verifier) throws IOException, URISyntaxException {
-        JwtAccessTokenConverter converter = new JwtAccessTokenConverter();
-        converter.setSigningKey(getPemContent("jwt.pem"));
-        converter.setVerifierKey(getPemContent("jwt_pub.pem"));
-        converter.setJwtClaimsSetVerifier(verifier);
-        return converter;
-    }
-
-    private String getPemContent(String file) throws IOException, URISyntaxException {
-        try (BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(new ClassPathResource(file).getInputStream()))) {
-            return bufferedReader.lines().collect(Collectors.joining(""));
-        }
-    }
-
-    @Bean
-    public AuthenticationManager authenticationManager(DaoAuthenticationProvider customAuthenticationProvider) {
-        List<AuthenticationProvider> providers = new ArrayList<>();
-        providers.add(customAuthenticationProvider);
-        return new ProviderManager(providers);
-    }
+//    @Bean
+//    public AuthenticationManager authenticationManager(DaoAuthenticationProvider customAuthenticationProvider) {
+//        List<AuthenticationProvider> providers = new ArrayList<>();
+//        providers.add(customAuthenticationProvider);
+//        return new ProviderManager(providers);
+//    }
 
     public static void main(String[] args) throws Exception {
         SpringApplication.run(ServerApplication.class, args);

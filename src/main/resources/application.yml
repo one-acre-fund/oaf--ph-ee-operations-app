@@ -1,11 +1,11 @@
 fineract:
   datasource:
     core:
-      host: operations-mysql
+      host: localhost
       port: 3306
       schema: tenants
-      username: root
-      password: mysql
+      username: mysqliadmin
+      password: ThukuAdmin1
     common:
       protocol: jdbc
       subprotocol: mysql
@@ -21,6 +21,8 @@ token:
     refresh-validity-seconds: 43200
   client:
     access-validity-seconds: 3600
+    channel:
+      secret: ""
 
 config:
   imu:
@@ -42,9 +44,16 @@ spring:
       enabled: false
   jmx:
     enabled: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: ${FINERACT_KEYCLOAK_INTEGRATION:https://secure-api.qa.oneacrefund.org/realms/fineract/protocol/openid-connect/certs}
+#          issuer-uri: ${FINERACT_KEYCLOAK_INTEGRATION:https://secure-api.qa.oneacrefund.org/realms/fineract}
+    whitelist:
 
 server:
-  port: 5000
+  port: 5050
 
 rest:
   authorization:
@@ -85,3 +94,9 @@ application:
 
 ams:
   sources: '[{"name": "TUPANDE ACCOUNT", "id": "TUPANDEACCOUNTID"}]'
+
+channel-connector:
+  url: http://bb-connector-channel.mifos.io
+  transfer-path: /channel/transfer
+
+tenants: "oaf"
