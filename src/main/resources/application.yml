@@ -59,7 +59,7 @@ spring:
     whitelist:
 
 server:
-  port: 5050
+  port: 5000
 
 rest:
   authorization:
