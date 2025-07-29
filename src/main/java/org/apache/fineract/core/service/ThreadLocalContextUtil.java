@@ -38,6 +38,7 @@ public class ThreadLocalContextUtil {
 
     public static void clear() {
         tenantcontext.remove();
+        authTokenContext.remove();
     }
 
     public static void setAuthToken(final String authToken) {

@@ -19,6 +19,7 @@
 package org.apache.fineract;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.fineract.config.security.filter.TenantAwareKeycloakFilter;
 import org.apache.fineract.core.service.TenantAwareHeaderFilter;
 import org.apache.fineract.organisation.tenant.TenantServerConnectionRepository;
 import org.mifos.connector.common.interceptor.annotation.EnableJsonWebSignature;
@@ -34,6 +35,7 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.ProviderManager;
@@ -81,7 +83,8 @@ public class ServerApplication {
 
 
     @Bean
-    public FilterRegistrationBean tenantFilter(TenantServerConnectionRepository repository) {
+    @Profile("!keycloak")
+    public FilterRegistrationBean basicAuthTenantFilter(TenantServerConnectionRepository repository) {
         FilterRegistrationBean registration = new FilterRegistrationBean();
         registration.setFilter(new TenantAwareHeaderFilter(repository));
         registration.addUrlPatterns("/*");

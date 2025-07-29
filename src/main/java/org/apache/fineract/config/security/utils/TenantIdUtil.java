@@ -35,6 +35,9 @@ public class TenantIdUtil {
     }
 
     private boolean canUseDefaultTenant(String requestURI) {
+        if (requestURI == null) {
+            return false;
+        }
         for (String uri : allowedURIs) {
             if (pathMatcher.match(uri, requestURI)) {
                 return true;

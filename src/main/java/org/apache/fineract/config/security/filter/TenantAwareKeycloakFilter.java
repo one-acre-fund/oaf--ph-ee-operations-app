@@ -27,7 +27,6 @@ import org.apache.fineract.core.service.PlatformRequestLog;
 import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.organisation.tenant.TenantServerConnectionRepository;
 import org.apache.fineract.organisation.user.AppUser;
-import org.keycloak.KeycloakPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +37,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -54,7 +54,7 @@ import java.util.Enumeration;
 public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
 
     private static final Logger LOG = LoggerFactory.getLogger(TenantAwareKeycloakFilter.class);
-    private final String tenantRequestHeader = "Fineract-Platform-TenantId";
+    private final String tenantRequestHeader = "Platform-TenantId";
     private final boolean exceptionIfHeaderMissing = true;
     private final UserDetailsService userDetailsService;
     private final TenantIdUtil tenantIdUtil;
@@ -80,7 +80,8 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
 
         try {
 
-            if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || request.getRequestURL().toString().contains("actuator")) {
+            if ("OPTIONS".equalsIgnoreCase(request.getMethod()) || request.getRequestURL().toString().contains("actuator") ||
+                    request.getRequestURL().toString().contains("api-docs") || request.getRequestURL().toString().contains("swagger")) {
                 // ignore to allow 'preflight' requests from AJAX applications
                 // in different origin (domain name)
             } else {
@@ -93,7 +94,7 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
 
                 tenantIdentifier = tenantIdUtil.useDefaultTenantIdIfBlank(tenantIdentifier, request.getRequestURI());
 
-                if (tenantIdentifier == null && this.exceptionIfHeaderMissing) {
+                if (tenantIdentifier == null || tenantIdentifier.isEmpty() && this.exceptionIfHeaderMissing) {
                     throw new InvalidTenantIdentifierException("No tenant identifier found: Add request header of '"
                             + this.tenantRequestHeader + "' or add the parameter 'tenantIdentifier' to query string of request URL.");
                 }
@@ -102,11 +103,6 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
                 boolean isReportRequest = false;
                 if (pathInfo != null && pathInfo.contains("report")) {
                     isReportRequest = true;
-                }
-
-                if (tenantIdentifier == null || tenantIdentifier.length() < 1) {
-                    throw new RuntimeException(
-                            String.format("No tenant identifier found! Add request header: %s ", tenantRequestHeader));
                 }
 
                 ThreadLocalContextUtil.setTenant(this.repository.findOneBySchemaName(tenantIdentifier));
@@ -118,7 +114,10 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
                 if (headerNames != null) {
                     while (headerNames.hasMoreElements()) {
                         String headerName = headerNames.nextElement();
-                        LOG.debug("{}: {}", headerName, request.getHeader(headerName));
+                        if (!headerName.equalsIgnoreCase("Authorization") &&
+                             !headerName.equalsIgnoreCase("Cookie")) {
+                            LOG.debug("{}: {}", headerName, request.getHeader(headerName));
+                        }
                     }
                 }
 
@@ -136,11 +135,19 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
                 UserDetails userDetails = null;
                 try {
                     Object principal = keyCloakAuthenticatedObject.getPrincipal();
+                    String username = "";
                     if (principal instanceof AppUser) {
-                        userDetails = userDetailsService.loadUserByUsername(((AppUser) principal).getUsername());
-                    } else if (principal instanceof KeycloakPrincipal) {
-                        userDetails = userDetailsService.loadUserByUsername(((KeycloakPrincipal<?>) principal).getName());
+                        username = ((AppUser) principal).getUsername();
+                    } else if (principal instanceof Jwt) {
+                        username = (String) (((Jwt) principal).getClaims().get("email"));
                     }
+                    if (!username.endsWith("@oneacrefund.org")) {
+                        LOG.error("User not recognized: {}", username);
+                        response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                                "User not authorized to access this resource");
+                        return;
+                    }
+                    userDetails = userDetailsService.loadUserByUsername(username);
                     if (userDetails != null) {
                         Authentication authentication = new UsernamePasswordAuthenticationToken(userDetails, userDetails.getPassword(),
                                 keycloakUserCreationService.resolveAuthoritiesFromUserDetails(userDetails).getLeft());
@@ -150,21 +157,25 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
                     }
 
                 } catch (UsernameNotFoundException ex) {
-                    LOG.error(ex.getMessage());
+                    LOG.error("Keycloak user not found in database: {}", ex.getMessage());
+                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED,
+                         "User authenticated by Keycloak but not found");
+                    return;
                 }
             }
 
             filterChain.doFilter(request, response);
 
         } catch (final InvalidTenantIdentifierException e) {
-            // deal with exception at low level
             SecurityContextHolder.getContext().setAuthentication(null);
-
-            response.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
+            ThreadLocalContextUtil.clear();
+            LOG.error("Invalid tenant identifier exception occurred: {}", e.getMessage());
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid tenant identifier.");
         } finally {
             task.stop();
             final PlatformRequestLog log = PlatformRequestLog.from(task, request);
             LOG.debug("{}", log.toString());// check on this
+            ThreadLocalContextUtil.clear();
         }
     }
 
