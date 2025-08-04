@@ -22,11 +22,14 @@ package org.apache.fineract.config.security.service;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+
+import static org.apache.fineract.config.CacheConfig.CACHE_USER_BY_NAME;
 
 /**
  * Used in securityContext.xml as implementation of spring security's {@link UserDetailsService}.
@@ -38,6 +41,7 @@ public class TenantAwareJpaPlatformUserDetailsService implements UserDetailsServ
     private AppUserRepository appUserRepository;
 
     @Override
+    @Cacheable(cacheNames = CACHE_USER_BY_NAME)
     public UserDetails loadUserByUsername(final String username) throws UsernameNotFoundException, DataAccessException {
 
         final AppUser appUser = this.appUserRepository.findAppUserByName(username);

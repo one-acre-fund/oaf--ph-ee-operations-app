@@ -57,6 +57,8 @@ spring:
         jwt:
           jwk-set-uri: ${keycloak.auth-server-url}/realms/${keycloak.realm}/protocol/openid-connect/certs
     whitelist:
+  profiles:
+    active: keycloak
 
 server:
   port: 5000
