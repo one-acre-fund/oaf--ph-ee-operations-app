@@ -4,7 +4,6 @@ import org.apache.fineract.config.security.SecurityConfig;
 import org.junit.jupiter.api.Test;
 import org.keycloak.adapters.KeycloakConfigResolver;
 import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;
-import org.mockito.InjectMocks;
 import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
 

@@ -92,7 +92,6 @@ public class OperationsDetailedApi {
         }
 
         List<TransferResponse> transferResponseList = new ArrayList<>();
-        int i = 0;
         for (Transfer transfer : transferPage.getContent()) {
             TransferResponse transferResponse = null;
             try {
@@ -305,7 +304,7 @@ public class OperationsDetailedApi {
     private List<Specifications<TransactionRequest>> checkAssignments(Authentication authentication, String payeePartyId, String payeePartyIdType, String currency) {
         List<Specifications<TransactionRequest>> specs = new ArrayList<>();
         // Get the authenticated user by username
-        KeycloakPrincipal principal = (KeycloakPrincipal)authentication.getPrincipal();
+        KeycloakPrincipal<?> principal = (KeycloakPrincipal<?>)authentication.getPrincipal();
         AppUser currentUser = appUserRepository.findAppUserByName(principal.getKeycloakSecurityContext().getToken().getPreferredUsername());
         // filter transactions by dukas assigned to the user
         specs.addAll(getDukasSpecs(currentUser, payeePartyId));

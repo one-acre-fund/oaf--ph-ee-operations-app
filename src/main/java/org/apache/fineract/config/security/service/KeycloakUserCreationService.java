@@ -43,9 +43,6 @@ import java.util.Set;
 @Service
 public class KeycloakUserCreationService {
 
-    @Autowired
-    private AppUserRepository appUserRepository;
-
     @Value("${FINERACT_KEYCLOAK_RESOURCE:fineract}")
     private String keycloakClientId;
 

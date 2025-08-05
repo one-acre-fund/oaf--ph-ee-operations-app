@@ -36,9 +36,11 @@ import static org.apache.fineract.config.CacheConfig.CACHE_USER_BY_NAME;
  */
 @Service("userDetailsService")
 public class TenantAwareJpaPlatformUserDetailsService implements UserDetailsService {
+    private final AppUserRepository appUserRepository;
 
-    @Autowired
-    private AppUserRepository appUserRepository;
+    public TenantAwareJpaPlatformUserDetailsService(AppUserRepository appUserRepository) {
+        this.appUserRepository = appUserRepository;
+    }
 
     @Override
     @Cacheable(cacheNames = CACHE_USER_BY_NAME)

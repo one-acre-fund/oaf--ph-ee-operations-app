@@ -44,7 +44,7 @@ class TenantIdUtilTest {
 
     @Test
     @DisplayName("Should return false if requestURI is null")
-    void shouldReturnFalseForNullURI() throws Exception {
+    void shouldReturnFalseForNullURI() {
         String result = tenantIdUtil.useDefaultTenantIdIfBlank("", null);
         assertEquals("", result);
     }

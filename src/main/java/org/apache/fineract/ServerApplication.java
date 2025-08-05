@@ -84,8 +84,8 @@ public class ServerApplication {
 
     @Bean
     @Profile("!keycloak")
-    public FilterRegistrationBean basicAuthTenantFilter(TenantServerConnectionRepository repository) {
-        FilterRegistrationBean registration = new FilterRegistrationBean();
+    public FilterRegistrationBean<TenantAwareHeaderFilter> basicAuthTenantFilter(TenantServerConnectionRepository repository) {
+        FilterRegistrationBean<TenantAwareHeaderFilter> registration = new FilterRegistrationBean<>();
         registration.setFilter(new TenantAwareHeaderFilter(repository));
         registration.addUrlPatterns("/*");
         registration.setName("tenantFilter");
@@ -94,7 +94,7 @@ public class ServerApplication {
     }
 
     @Bean
-    public FilterRegistrationBean corsFilter() {
+    public FilterRegistrationBean<CorsFilter> corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowCredentials(true);
         config.addAllowedOrigin("*");
@@ -102,7 +102,7 @@ public class ServerApplication {
         config.addAllowedMethod("*");
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-        FilterRegistrationBean bean = new FilterRegistrationBean(new CorsFilter(source));
+        FilterRegistrationBean<CorsFilter> bean = new FilterRegistrationBean<>(new CorsFilter(source));
         bean.setOrder(securityFilterOrder - 5);
         return bean;
     }
