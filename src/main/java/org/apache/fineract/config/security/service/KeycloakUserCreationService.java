@@ -23,9 +23,6 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.fineract.organisation.permission.Permission;
 import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.user.AppUser;
-import org.apache.fineract.organisation.user.AppUserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -42,9 +39,6 @@ import java.util.Set;
 @Slf4j
 @Service
 public class KeycloakUserCreationService {
-
-    @Value("${FINERACT_KEYCLOAK_RESOURCE:fineract}")
-    private String keycloakClientId;
 
     public Pair<Collection<GrantedAuthority>, Set<String>> resolveAuthoritiesFromUserDetails(UserDetails userDetails) {
         final Collection<GrantedAuthority> authorities = new ArrayList<>();
