@@ -32,7 +32,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.apache.fineract.config.ResourceServerConfig.IDENTITY_PROVIDER_RESOURCE_ID;
 
 @Service
 public class TenantDatabaseUpgradeService {
@@ -104,7 +103,7 @@ public class TenantDatabaseUpgradeService {
                     placeholders.put("userRefreshTokenValidity", userTokenRefreshValiditySeconds);
                     placeholders.put("clientAccessTokenValidity", clientAccessTokenValidity);
                     placeholders.put("channelClientSecret", channelClientSecret);
-                    placeholders.put("identityProviderResourceId", IDENTITY_PROVIDER_RESOURCE_ID); // add identity provider as aud claim
+                    placeholders.put("identityProviderResourceId", "identity-provider"); // add identity provider as aud claim
                     fw.setPlaceholders(placeholders);
                     fw.migrate();
                 } catch (Exception e) {

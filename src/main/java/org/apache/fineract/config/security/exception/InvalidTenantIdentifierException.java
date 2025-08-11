@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License. You may obtain a copy of the License at
- * <p>
+ *
  * http://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -16,15 +16,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.apache.fineract.organisation.user;
+package org.apache.fineract.config.security.exception;
 
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
+import org.springframework.dao.EmptyResultDataAccessException;
 
-public interface AppUserRepository extends JpaRepository<AppUser, Long>, JpaSpecificationExecutor<AppUser> {
+/**
+ * {@link RuntimeException} thrown when an invalid tenant identifier is used in request to platform.
+ *
+ *
+ */
+public class InvalidTenantIdentifierException extends RuntimeException {
 
-    @Query("Select appUser from AppUser appUser where (appUser.username = :username or appUser.email = :username) and appUser.enabled = true")
-    AppUser findAppUserByName(@Param("username") String username);
+    public InvalidTenantIdentifierException(final String message) {
+        super(message);
+    }
+
+    public InvalidTenantIdentifierException(String message, EmptyResultDataAccessException e) {
+        super(message, e);
+    }
 }

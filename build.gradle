@@ -16,17 +16,15 @@ repositories {
     }
 
     maven {
-        url = uri('https://jfrog.sandbox.fynarfin.io/artifactory/fyn-libs-snapshot')
+        url = uri('https://mifos.jfrog.io/artifactory/phee-gradle-local')
     }
 }
 
 dependencies {
-    implementation 'org.springframework.security:spring-security-jwt:1.1.0.RELEASE'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.security:spring-security-crypto'
-    implementation 'org.springframework.security.oauth:spring-security-oauth2:2.4.1.RELEASE'
     implementation 'org.json:json:20190722'
     implementation 'org.eclipse.persistence:org.eclipse.persistence.jpa:2.7.6'
     implementation 'org.hibernate:hibernate-jpamodelgen:5.4.17.Final'
@@ -46,9 +44,13 @@ dependencies {
     compileOnly 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
     implementation "org.springdoc:springdoc-openapi-ui:1.6.11"
-    implementation 'org.mifos:ph-ee-connector-common:1.4.0-SNAPSHOT'
+    implementation 'org.mifos:ph-ee-connector-common:1.4.1-gazelle'
 
     testImplementation 'org.mockito:mockito-core:3.12.4'
+    testImplementation 'org.springframework:spring-test:5.1.10.RELEASE'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation("org.keycloak:keycloak-spring-boot-starter:25.0.3")
 }
 
 group = 'org.apache.fineract'

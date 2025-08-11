@@ -38,8 +38,8 @@ security:
 
 keycloak:
   realm: ${KEYCLOAK_REALM:OneAcreFund}
-  auth-server-url: ${KEYCLOAK_BASE_URL:https://accounts.integration.oneacrefund.org}
-  resource: ${KEYCLOAK_CLIENT_ID:fineract}
+  auth-server-url: ${KEYCLOAK_BASE_URL:https://accounts.qa.oneacrefund.org}
+  resource: ${KEYCLOAK_CLIENT_ID:paymenthub}
   bearer-only: true
   ssl-required: none
 
@@ -57,8 +57,6 @@ spring:
         jwt:
           jwk-set-uri: ${keycloak.auth-server-url}/realms/${keycloak.realm}/protocol/openid-connect/certs
     whitelist:
-  profiles:
-    active: keycloak
 
 server:
   port: 5000
@@ -81,8 +79,8 @@ cloud:
   aws:
     enabled: true
     credentials:
-      access-key: ${AWS_ACCESS_KEY:AKIAX32JM37TZOJ5AKFB}
-      secret-key: ${AWS_SECRET_KEY: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}
+      access-key: ${AWS_ACCESS_KEY:}
+      secret-key: ${AWS_SECRET_KEY:}
     region:
       static: us-east-2
     stack:
@@ -106,8 +104,9 @@ ams:
 springdoc:
   swagger-ui:
     oauth:
-      client-id: ${KEYCLOAK_CLIENT_ID:fineract}
-      realm: ${KEYCLOAK_REALM:fineract}
+      client-id: ${KEYCLOAK_CLIENT_ID:paymenthub}
+      realm: ${KEYCLOAK_REALM:OneAcreFund}
       app-name: Payment Hub
       use-pkce-with-authorization-code-grant: true
     oauth2-redirect-url: ${FINERACT_SWAGGER_REDIRECT_URL:http://localhost:5050/swagger-ui/oauth2-redirect.html}
+

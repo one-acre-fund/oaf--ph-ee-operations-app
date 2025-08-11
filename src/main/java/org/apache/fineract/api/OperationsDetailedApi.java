@@ -10,6 +10,7 @@ import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
 import org.apache.fineract.utils.CsvUtility;
 import org.apache.fineract.utils.DateUtil;
+import org.keycloak.KeycloakPrincipal;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,7 +33,7 @@ import static org.apache.fineract.core.service.OperatorUtils.dateFormat;
 
 @RestController
 @RequestMapping("/api/v1")
-@SecurityRequirement(name = "auth")
+@SecurityRequirement(name = "BearerAuth")
 @Tag(name = "Operations Detailed API")
 @SecurityRequirement(name = "api")
 public class OperationsDetailedApi {
@@ -91,7 +92,6 @@ public class OperationsDetailedApi {
         }
 
         List<TransferResponse> transferResponseList = new ArrayList<>();
-        int i = 0;
         for (Transfer transfer : transferPage.getContent()) {
             TransferResponse transferResponse = null;
             try {
@@ -304,7 +304,8 @@ public class OperationsDetailedApi {
     private List<Specifications<TransactionRequest>> checkAssignments(Authentication authentication, String payeePartyId, String payeePartyIdType, String currency) {
         List<Specifications<TransactionRequest>> specs = new ArrayList<>();
         // Get the authenticated user by username
-        AppUser currentUser = appUserRepository.findAppUserByName(authentication.getName());
+        KeycloakPrincipal<?> principal = (KeycloakPrincipal<?>)authentication.getPrincipal();
+        AppUser currentUser = appUserRepository.findAppUserByName(principal.getKeycloakSecurityContext().getToken().getPreferredUsername());
         // filter transactions by dukas assigned to the user
         specs.addAll(getDukasSpecs(currentUser, payeePartyId));
         // filter transactions by currencies assigned to the user

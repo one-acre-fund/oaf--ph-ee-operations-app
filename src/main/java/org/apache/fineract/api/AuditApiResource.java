@@ -23,7 +23,7 @@ import java.util.Date;
 
 
 @RestController
-@SecurityRequirement(name = "auth")
+@SecurityRequirement(name = "BearerAuth")
 @RequestMapping("/api/v1/audit")
 @Tag(name = "Audit API")
 public class AuditApiResource {
