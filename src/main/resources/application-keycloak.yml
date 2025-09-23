@@ -110,3 +110,8 @@ springdoc:
       use-pkce-with-authorization-code-grant: true
     oauth2-redirect-url: ${FINERACT_SWAGGER_REDIRECT_URL:http://localhost:5050/swagger-ui/oauth2-redirect.html}
 
+channel-connector:
+  url: http://bb-connector-channel.mifos.io
+  transfer-path: /channel/transfer
+
+tenants: "oaf"
