@@ -13,7 +13,7 @@ fineract:
 
 # Interface time zone reference : https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 interface:
-  timezone: "UTC"
+  timezone: "Asia/Kolkata"
 
 token:
   user:
@@ -57,8 +57,6 @@ spring:
         jwt:
           jwk-set-uri: ${keycloak.auth-server-url}/realms/${keycloak.realm}/protocol/openid-connect/certs
     whitelist:
-  profiles:
-    active: keycloak
 
 server:
   port: 5000
@@ -74,15 +72,15 @@ rest:
 logging:
   level:
     ROOT: ERROR
-  pattern:
-    console: "%clr(%d{dd-MM-yyyy HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr([%35.35t]){faint} %clr(%-28.28logger{28}){cyan} %clr(:){faint}%X{BUSINESS-LOG} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"
+    pattern:
+      console: "%clr(%d{dd-MM-yyyy HH:mm:ss.SSS}){faint} %clr(${LOG_LEVEL_PATTERN:-%5p}) %clr([%35.35t]){faint} %clr(%-28.28logger{28}){cyan} %clr(:){faint}%X{BUSINESS-LOG} %m%n${LOG_EXCEPTION_CONVERSION_WORD:-%wEx}"
 
 cloud:
   aws:
     enabled: true
     credentials:
-      access-key: ${AWS_ACCESS_KEY:AKIAX32JM37TZOJ5AKFB}
-      secret-key: ${AWS_SECRET_KEY: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}
+      access-key: ${AWS_ACCESS_KEY:}
+      secret-key: ${AWS_SECRET_KEY:}
     region:
       static: us-east-2
     stack:
@@ -103,17 +101,6 @@ application:
 ams:
   sources: '[{"name": "TUPANDE ACCOUNT", "id": "TUPANDEACCOUNTID"}]'
 
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health, prometheus
-  endpoint:
-    health:
-      show-details: always
-    prometheus:
-      enabled: true
-
 springdoc:
   swagger-ui:
     oauth:
@@ -121,4 +108,10 @@ springdoc:
       realm: ${KEYCLOAK_REALM:OneAcreFund}
       app-name: Payment Hub
       use-pkce-with-authorization-code-grant: true
-    oauth2-redirect-url: ${PH_OPERATIONS_APP_SWAGGER_REDIRECT_URL:https://paymenthub.qa.oneacrefund.org/opsapp/swagger-ui/oauth2-redirect.html}
+    oauth2-redirect-url: ${FINERACT_SWAGGER_REDIRECT_URL:http://localhost:5050/swagger-ui/oauth2-redirect.html}
+
+channel-connector:
+  url: http://bb-connector-channel.mifos.io
+  transfer-path: /channel/transfer
+
+tenants: "oaf"

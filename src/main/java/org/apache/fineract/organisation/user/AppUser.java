@@ -333,4 +333,5 @@ public class AppUser extends AbstractPersistableCustom<Long> implements UserDeta
     public int hashCode() {
         return Objects.hash(username);
     }
+
 }

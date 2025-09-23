@@ -7,6 +7,9 @@ import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.keycloak.KeycloakPrincipal;
+import org.keycloak.KeycloakSecurityContext;
+import org.keycloak.representations.AccessToken;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -43,13 +46,18 @@ class OperationsDetailedApiTest {
         MockitoAnnotations.openMocks(this);
     }
 
-    private void setupSecurityContext(AppUser principal) {
-        Authentication authentication = new PreAuthenticatedAuthenticationToken(principal, "token", null);
-
+    private void setupSecurityContext(AppUser appUser) {
+        AccessToken accessToken = mock(AccessToken.class);
+        when(accessToken.getPreferredUsername()).thenReturn(appUser.getUsername());
+        KeycloakSecurityContext keycloakSecurityContext = mock(KeycloakSecurityContext.class);
+        when(keycloakSecurityContext.getToken()).thenReturn(accessToken);
+        KeycloakPrincipal<KeycloakSecurityContext> keycloakPrincipal =
+                new KeycloakPrincipal<>("mock", keycloakSecurityContext);
+        Authentication authentication =
+                new PreAuthenticatedAuthenticationToken(keycloakPrincipal, "token", null);
         SecurityContext securityContext = new SecurityContextImpl();
         securityContext.setAuthentication(authentication);
         SecurityContextHolder.setContext(securityContext);
-
     }
 
     @Test

@@ -24,6 +24,8 @@ import org.springframework.util.Assert;
 public class ThreadLocalContextUtil {
 
     private static final ThreadLocal<TenantServerConnection> tenantcontext = new ThreadLocal<>();
+    private static final ThreadLocal<String> authTokenContext = new ThreadLocal<>();
+
 
     public static void setTenant(final TenantServerConnection tenant) {
         Assert.notNull(tenant, "tenant cannot be null");
@@ -36,5 +38,10 @@ public class ThreadLocalContextUtil {
 
     public static void clear() {
         tenantcontext.remove();
+        authTokenContext.remove();
+    }
+
+    public static void setAuthToken(final String authToken) {
+        authTokenContext.set(authToken);
     }
 }

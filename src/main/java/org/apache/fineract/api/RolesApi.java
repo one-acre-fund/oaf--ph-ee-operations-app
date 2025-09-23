@@ -43,7 +43,7 @@ import static java.util.stream.Collectors.toList;
 import static org.apache.fineract.api.AssignmentAction.ASSIGN;
 
 @RestController
-@SecurityRequirement(name = "auth")
+@SecurityRequirement(name = "BearerAuth")
 public class RolesApi {
 
     @Autowired

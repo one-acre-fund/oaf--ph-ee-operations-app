@@ -24,8 +24,8 @@ import java.util.Objects;
 
 
 @RestController
-@SecurityRequirement(name = "auth")
-@RequestMapping("/audits")
+@SecurityRequirement(name = "BearerAuth")
+@RequestMapping("audits")
 @Tag(name = "Audit API")
 public class AuditApiResource {
     private AuditService auditService;

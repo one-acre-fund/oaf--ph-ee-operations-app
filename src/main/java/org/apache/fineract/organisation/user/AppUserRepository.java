@@ -27,7 +27,7 @@ import java.util.List;
 
 public interface AppUserRepository extends JpaRepository<AppUser, Long>, JpaSpecificationExecutor<AppUser> {
 
-    @Query("Select appUser from AppUser appUser where appUser.username = :username")
+    @Query("Select appUser from AppUser appUser where (appUser.username = :username or appUser.email = :username) and appUser.enabled = true")
     AppUser findAppUserByName(@Param("username") String username);
 
     @Query("Select new org.apache.fineract.organisation.user.UserDto(appUser.id, appUser.username) from AppUser appUser")
