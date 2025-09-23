@@ -2,6 +2,7 @@ package org.apache.fineract.api;
 
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.fineract.TestUtils;
 import org.apache.fineract.operations.*;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
@@ -23,6 +24,7 @@ import org.springframework.data.jpa.domain.Specifications;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -55,6 +57,8 @@ class OperationsDetailedApiTest {
 
     @InjectMocks
     private OperationsDetailedApi operationsDetailedApi;
+
+    private TestUtils testUtils = new TestUtils();
 
 
     @BeforeEach
@@ -156,15 +160,12 @@ class OperationsDetailedApiTest {
         String payeePartyId = "12345";
         String payeePartyIdType = "ID";
 
-        Authentication authentication = Mockito.mock(Authentication.class);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        Mockito.when(authentication.isAuthenticated()).thenReturn(true);
-        Mockito.when(authentication.getName()).thenReturn("testUser");
-
         AppUser appUser = new AppUser();
         appUser.setPayeePartyIdsList(Collections.singletonList("*"));
         appUser.setCurrenciesList(Collections.singletonList("*"));
+        appUser.setUsername("testUser");
         Mockito.when(appUserRepository.findAppUserByName("testUser")).thenReturn(appUser);
+        testUtils.setupSecurityContext(appUser);
 
         Page<TransactionRequest> expectedPage = new PageImpl<>(new ArrayList<>(), pager, 0);
         Mockito.when(transactionRequestRepository.findAll(Mockito.any(Specifications.class), Mockito.eq(pager))).thenReturn(expectedPage);
@@ -194,8 +195,10 @@ class OperationsDetailedApiTest {
 
         AppUser appUser = new AppUser();
         appUser.setCurrenciesList(Collections.singletonList("*"));
-        Mockito.when(appUserRepository.findAppUserByName("testUser")).thenReturn(appUser);
 
+        when(appUserRepository.findAppUserByName(any())).thenReturn(appUser);
+
+        testUtils.setupSecurityContext(appUser);
         Page<TransactionRequest> expectedPage = new PageImpl<>(new ArrayList<>(), pager, 0);
         Mockito.when(transactionRequestRepository.findAll(Mockito.any(Specifications.class), Mockito.eq(pager))).thenReturn(expectedPage);
 
@@ -312,9 +315,10 @@ class OperationsDetailedApiTest {
         Mockito.when(authentication.isAuthenticated()).thenReturn(true);
         Mockito.when(authentication.getName()).thenReturn("testUser");
 
-        AppUser appUser = new AppUser();
-        appUser.setCurrenciesList(Collections.singletonList("*"));
-        Mockito.when(appUserRepository.findAppUserByName("testUser")).thenReturn(appUser);
+        AppUser currentUser = new AppUser(); // User not authorized for anything
+        when(appUserRepository.findAppUserByName(any())).thenReturn(currentUser);
+
+        testUtils.setupSecurityContext(currentUser);
 
 
         Map<String, List<String>> body = new HashMap<>();
@@ -336,10 +340,10 @@ class OperationsDetailedApiTest {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         Mockito.when(authentication.isAuthenticated()).thenReturn(true);
         Mockito.when(authentication.getName()).thenReturn("testUser");
+        AppUser currentUser = new AppUser(); // User not authorized for anything
+        when(appUserRepository.findAppUserByName(any())).thenReturn(currentUser);
 
-        AppUser appUser = new AppUser();
-        appUser.setCurrenciesList(Collections.singletonList("*"));
-        Mockito.when(appUserRepository.findAppUserByName("testUser")).thenReturn(appUser);
+        testUtils.setupSecurityContext(currentUser);
 
 
         Map<String, List<String>> body = new HashMap<>();

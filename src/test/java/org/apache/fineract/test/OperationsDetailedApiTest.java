@@ -1,5 +1,6 @@
 package org.apache.fineract.test;
 
+import org.apache.fineract.TestUtils;
 import org.apache.fineract.api.OperationsDetailedApi;
 import org.apache.fineract.operations.TransactionRequest;
 import org.apache.fineract.operations.TransactionRequestRepository;
@@ -40,25 +41,13 @@ class OperationsDetailedApiTest {
 
     @InjectMocks
     private OperationsDetailedApi operationsDetailedApi;
+    private TestUtils testUtils = new TestUtils();
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
     }
 
-    private void setupSecurityContext(AppUser appUser) {
-        AccessToken accessToken = mock(AccessToken.class);
-        when(accessToken.getPreferredUsername()).thenReturn(appUser.getUsername());
-        KeycloakSecurityContext keycloakSecurityContext = mock(KeycloakSecurityContext.class);
-        when(keycloakSecurityContext.getToken()).thenReturn(accessToken);
-        KeycloakPrincipal<KeycloakSecurityContext> keycloakPrincipal =
-                new KeycloakPrincipal<>("mock", keycloakSecurityContext);
-        Authentication authentication =
-                new PreAuthenticatedAuthenticationToken(keycloakPrincipal, "token", null);
-        SecurityContext securityContext = new SecurityContextImpl();
-        securityContext.setAuthentication(authentication);
-        SecurityContextHolder.setContext(securityContext);
-    }
 
     @Test
     void testTransactionRequestFilter_UserNotAuthenticated() {
@@ -96,7 +85,7 @@ class OperationsDetailedApiTest {
         AppUser currentUser = new AppUser(); // User not authorized for anything
         when(appUserRepository.findAppUserByName(any())).thenReturn(currentUser);
 
-        setupSecurityContext(currentUser);
+        testUtils.setupSecurityContext(currentUser);
         // Act
         Page<TransactionRequest> result = operationsDetailedApi.transactionRequestFilter(pager, specs, currency, payeePartyId, payeePartyIdType);
 
