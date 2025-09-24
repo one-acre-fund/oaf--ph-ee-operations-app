@@ -35,6 +35,7 @@ steps:
       echo "##vso[task.setvariable variable=IMAGE_SEMANTIC_HASH]$IMAGE_TAGS"
       if [[ "$(Build.SourceBranch)" == "refs/heads/main" ]]; then IMAGE_TAGS="$VERSION_TAG,latest"; fi;
       echo Tags: $IMAGE_TAGS
+      echo repo: $(Build.Repository.Name)
       echo "##vso[task.setvariable variable=IMAGE_TAGS]$IMAGE_TAGS"
     displayName: Generate image tags
 
