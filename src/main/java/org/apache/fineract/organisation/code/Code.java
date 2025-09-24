@@ -18,9 +18,11 @@
  */
 package org.apache.fineract.organisation.code;
 
+import org.apache.fineract.config.CustomAuditingEntityListener;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 
 import javax.persistence.CascadeType;
+import javax.persistence.EntityListeners;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.FetchType;
@@ -31,6 +33,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "m_code", uniqueConstraints = { @UniqueConstraint(columnNames = { "code_name" }, name = "code_name") })
+@EntityListeners(CustomAuditingEntityListener.class)
 public class Code extends AbstractPersistableCustom<Long> {
 
     @Column(name = "code_name", length = 100)

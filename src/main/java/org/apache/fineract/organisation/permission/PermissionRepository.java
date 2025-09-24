@@ -19,9 +19,17 @@
 package org.apache.fineract.organisation.permission;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import java.util.List;
 
 
 public interface PermissionRepository extends JpaRepository<Permission, Long> {
 
     Permission findOneByCode(String code);
+    @Query("SELECT DISTINCT p.entityName FROM Permission p")
+    List<String> findDistinctEntityName();
+
+    @Query("SELECT DISTINCT p.actionName FROM Permission p")
+    List<String> findDistinctActionNames();
 }

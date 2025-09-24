@@ -1,8 +1,11 @@
 package org.apache.fineract.data;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.HashMap;
 
 public class ErrorResponse extends HashMap<String, String> {
+
+    public static final String EMPTY_RESPONSE = "Empty response";
 
     private enum Key {
         ERRORCODE("errorCode"),
@@ -46,5 +49,16 @@ public class ErrorResponse extends HashMap<String, String> {
             }
             return res;
         }
+    }
+
+    /**
+     * Creates an ErrorResponse object with 404 error code.
+     * @return {@link ErrorResponse}
+     */
+    public static ErrorResponse forEmptyResult() {
+        return new ErrorResponse.Builder()
+            .setErrorCode("" + HttpServletResponse.SC_NOT_FOUND)
+            .setErrorDescription(EMPTY_RESPONSE)
+            .setDeveloperMessage(EMPTY_RESPONSE).build();
     }
 }

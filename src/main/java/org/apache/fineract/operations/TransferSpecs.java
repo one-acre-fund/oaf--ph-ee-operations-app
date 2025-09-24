@@ -4,6 +4,7 @@ import org.springframework.data.jpa.domain.Specifications;
 
 import javax.persistence.metamodel.SingularAttribute;
 import java.util.Date;
+import java.util.List;
 
 import static org.springframework.data.jpa.domain.Specifications.where;
 
@@ -38,5 +39,16 @@ public class TransferSpecs {
                 builder.equal(root.get(attribute1), input),
                 builder.equal(root.get(attribute2), input)
         ));
+    }
+
+    /**
+     * Creates IN clause specification for {@link Transfer}
+     * @param attribute attribute to be checked
+     * @param inputs list of inputs
+     * @return {@link Specifications<Transfer>
+     * @param <T> type of the attribute
+     */
+    public static <T> Specifications<Transfer> in(SingularAttribute<Transfer, T> attribute, List<T> inputs) {
+        return Specs.in(attribute, inputs);
     }
 }

@@ -1,6 +1,7 @@
 package org.apache.fineract.operations;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
 import lombok.Setter;
@@ -8,10 +9,12 @@ import org.apache.commons.lang3.StringEscapeUtils;
 import org.mifos.connector.common.channel.dto.PhErrorDTO;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Getter
 @Setter
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class TransferResponse {
 
     private int id;
@@ -42,6 +45,11 @@ public class TransferResponse {
     private PhErrorDTO errorInformation;
     private String batchId;
     private String clientCorrelationId;
+    private LocalDateTime createdDate;
+    private LocalDateTime lastModifiedDate;
+    private String createdBy;
+    private String lastModifiedBy;
+    private String amsBusinessShortCode;
 
     public void parseErrorInformation(String json, ObjectMapper mapper) throws IOException {
         try {

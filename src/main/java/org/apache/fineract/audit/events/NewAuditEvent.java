@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
  */
 @Getter
 public class NewAuditEvent extends ApplicationEvent {
-    private final Integer resourceId;
+    private final Long resourceId;
 
     private final String actionName;
 
@@ -27,7 +27,7 @@ public class NewAuditEvent extends ApplicationEvent {
 
     private LocalDateTime madeOnDate;
 
-    public NewAuditEvent(Object source, Integer resourceId, String actionName, String entityName, String resourceGetUrl, String dataAsJson, AppUser maker, String processingResult,LocalDateTime madeOnDate) {
+    public NewAuditEvent(Object source, Long resourceId, String actionName, String entityName, String resourceGetUrl, String dataAsJson, AppUser maker, String processingResult,LocalDateTime madeOnDate) {
         super(source);
         this.resourceId = resourceId;
         this.actionName = actionName;

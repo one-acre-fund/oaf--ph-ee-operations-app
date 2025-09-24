@@ -1,5 +1,6 @@
 package org.apache.fineract.api;
 
+import com.amazonaws.util.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,7 +28,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
 import java.net.URLDecoder;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static org.apache.fineract.core.service.OperatorUtils.dateFormat;
 
@@ -67,7 +71,7 @@ public class OperationsDetailedApi {
     }
 
     @GetMapping("/transfers")
-    public Page<TransferResponse> transfers(@RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "1") Integer size, @RequestParam(value = "payerPartyId", required = false) String payerPartyId, @RequestParam(value = "payerDfspId", required = false) String payerDfspId, @RequestParam(value = "payeePartyId", required = false) String payeePartyId, @RequestParam(value = "payeeDfspId", required = false) String payeeDfspId, @RequestParam(value = "transactionId", required = false) String transactionId, @RequestParam(value = "status", required = false) String status, @RequestParam(value = "amount", required = false) BigDecimal amount, @RequestParam(value = "currency", required = false) String currency, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "direction", required = false) String direction, @RequestParam(value = "sortedBy", required = false) String sortedBy, @RequestParam(value = "partyId", required = false) String partyId, @RequestParam(value = "partyIdType", required = false) String partyIdType, @RequestParam(value = "clientCorrelationId", required = false) String clientCorrelationId, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder) {
+    public Page<TransferResponse> transfers(@RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "20") Integer size, @RequestParam(value = "payerPartyId", required = false) String payerPartyId, @RequestParam(value = "payerDfspId", required = false) String payerDfspId, @RequestParam(value = "payeePartyId", required = false) String payeePartyId, @RequestParam(value = "payeeDfspId", required = false) String payeeDfspId, @RequestParam(value = "transactionId", required = false) String transactionId, @RequestParam(value = "status", required = false) String status, @RequestParam(value = "amount", required = false) BigDecimal amount, @RequestParam(value = "currency", required = false) String currency, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "direction", required = false) String direction, @RequestParam(value = "sortedBy", required = false) String sortedBy, @RequestParam(value = "partyId", required = false) String partyId, @RequestParam(value = "partyIdType", required = false) String partyIdType, @RequestParam(value = "clientCorrelationId", required = false) String clientCorrelationId, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder) {
         List<Specifications<Transfer>> specs = getSearchSpecifications(status, amount, currency, direction, partyId, partyIdType, clientCorrelationId);
         specs.addAll(getSearchSpecification(payerPartyId, payerDfspId, payeeDfspId, payeePartyId, transactionId));
 
@@ -80,16 +84,7 @@ public class OperationsDetailedApi {
             pager = new PageRequest(page, size, new Sort(Sort.Direction.fromString(sortedOrder), sortedBy));
         }
 
-        Page<Transfer> transferPage;
-        if (specs.size() > 0) {
-            Specifications<Transfer> compiledSpecs = specs.get(0);
-            for (int i = 1; i < specs.size(); i++) {
-                compiledSpecs = compiledSpecs.and(specs.get(i));
-            }
-            transferPage = transferRepository.findAll(compiledSpecs, pager);
-        } else {
-            transferPage = transferRepository.findAll(pager);
-        }
+        Page<Transfer> transferPage = getTransfers(specs, pager);
 
         List<TransferResponse> transferResponseList = new ArrayList<>();
         for (Transfer transfer : transferPage.getContent()) {
@@ -98,6 +93,10 @@ public class OperationsDetailedApi {
                 String json = transfer.getErrorInformation();
                 transfer.setErrorInformation(null);
                 transferResponse = objectMapper.readValue(objectMapper.writeValueAsString(transfer), TransferResponse.class);
+                String businessShortCode = transfer.getAmsBusinessShortCode();
+                if (!StringUtils.isNullOrEmpty(businessShortCode)) {
+                    transferResponse.setPayerDfspId(businessShortCode);
+                }
                 transferResponse.parseErrorInformation(json, objectMapper);
                 transferResponseList.add(transferResponse);
             } catch (Exception e) {
@@ -111,6 +110,26 @@ public class OperationsDetailedApi {
 
         return new PageImpl<>(transferResponseList, transferPage.getPageable(), transferPage.getTotalPages());
 
+    }
+
+    /**
+     * Get the list of transfers based on the specs
+     * @param specs list of specifications
+     * @param pager page request
+     * @return page of transfers
+     */
+    private Page<Transfer> getTransfers(List<Specifications<Transfer>> specs, PageRequest pager) {
+        Page<Transfer> transferPage;
+        if (specs.size() > 0) {
+            Specifications<Transfer> compiledSpecs = specs.get(0);
+            for (int i = 1; i < specs.size(); i++) {
+                compiledSpecs = compiledSpecs.and(specs.get(i));
+            }
+            transferPage = transferRepository.findAll(compiledSpecs, pager);
+        } else {
+            transferPage = transferRepository.findAll(pager);
+        }
+        return transferPage;
     }
 
     private Collection<Specifications<Transfer>> getDateSearchSpecs(String startFrom, String startTo) {
@@ -147,7 +166,7 @@ public class OperationsDetailedApi {
             specs.add(TransferSpecs.match(Transfer_.payeeDfspId, payeeDfspId));
         }
         if (payerDfspId != null) {
-            specs.add(TransferSpecs.match(Transfer_.payerDfspId, payerDfspId));
+            specs.add(TransferSpecs.match(Transfer_.amsBusinessShortCode, payerDfspId));
         }
         if (transactionId != null) {
             specs.add(TransferSpecs.match(Transfer_.transactionId, transactionId));
@@ -227,7 +246,7 @@ public class OperationsDetailedApi {
             specs.add(TransactionRequestSpecs.like(TransactionRequest_.payeeDfspId, payeeDfspId));
         }
         if (payerDfspId != null) {
-            specs.add(TransactionRequestSpecs.like(TransactionRequest_.payerDfspId, payerDfspId));
+            specs.add(TransactionRequestSpecs.like(TransactionRequest_.amsBusinessShortCode, payerDfspId));
         }
         if (transactionId != null) {
             specs.add(TransactionRequestSpecs.like(TransactionRequest_.transactionId, transactionId));
@@ -484,10 +503,50 @@ public class OperationsDetailedApi {
         List<TransactionRequest> data = result.getContent();
         if (data.isEmpty()) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return new ErrorResponse.Builder().setErrorCode("" + HttpServletResponse.SC_NOT_FOUND).setErrorDescription("Empty response").setDeveloperMessage("Empty response").build();
+            return ErrorResponse.forEmptyResult();
         }
         try {
-            CsvUtility.writeToCsv(response, data);
+            CsvUtility.writeToCsv(response, data, generateCsvFileName("transactionRequest_"));
+        } catch (WriteToCsvException e) {
+            return new ErrorResponse.Builder().setErrorCode(e.getErrorCode()).setErrorDescription(e.getErrorDescription()).setDeveloperMessage(e.getDeveloperMessage()).build();
+        }
+        return null;
+    }
+
+    @PostMapping("/transfers/export")
+    public Map<String, String> exportTransfers(HttpServletResponse response, @RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "10000") Integer size, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "state", required = false) String state, @RequestBody Map<String, List<String>> body) {
+
+        List<String> filterByList = new ArrayList<>(body.keySet());
+        List<Specifications<Transfer>> specs = new ArrayList<>();
+        if (state != null && parseStatus(state) != null) {
+            specs.add(TransferSpecs.match(Transfer_.status, parseStatus(state)));
+        }
+        specs.addAll(getDateSearchSpecs(startFrom, startTo));
+
+        Specifications<Transfer> spec;
+        for (String filterBy : filterByList) {
+            List<String> ids = body.get(filterBy);
+            if (!ids.isEmpty()) {
+                Filter filter;
+                try {
+                    filter = parseFilter(filterBy);
+                } catch (Exception e) {
+                    logger.error("Unable to parse filter {} skipping", filterBy);
+                    continue;
+                }
+                spec = getTransferFilterSpecs(filter, ids);
+                specs.add(spec);
+            }
+        }
+        PageRequest pager = new PageRequest(page, size, new Sort(Sort.Direction.valueOf(sortedOrder), STARTED_AT_STRING));
+        Page<Transfer> result = getTransfers(specs, pager);
+        List<Transfer> data = result.getContent();
+        if (data.isEmpty()) {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            return ErrorResponse.forEmptyResult();
+        }
+        try {
+            CsvUtility.writeToCsv(response, data, generateCsvFileName("transfer_"));
         } catch (WriteToCsvException e) {
             return new ErrorResponse.Builder().setErrorCode(e.getErrorCode()).setErrorDescription(e.getErrorDescription()).setDeveloperMessage(e.getDeveloperMessage()).build();
         }
@@ -526,6 +585,9 @@ public class OperationsDetailedApi {
 
             case CLIENTCORRELATIONID:
                 spec = TransactionRequestSpecs.in(TransactionRequest_.clientCorrelationId, listOfValues);
+                break;
+            case PAYERDFSPID:
+                spec = TransactionRequestSpecs.in(TransactionRequest_.amsBusinessShortCode, listOfValues);
                 break;
         }
         return spec;
@@ -614,6 +676,19 @@ public class OperationsDetailedApi {
         }
     }
 
+    /**
+     * Parses the list of [TransferStatus] enum from list of status string
+     * @param statuses the list of status
+     * @return the list of [TransferStatus] enum
+     */
+    private List<TransferStatus> parseStatuses(List<String> statuses) {
+        List<TransferStatus> result = new ArrayList<>();
+        for (String status : statuses) {
+            result.add(parseStatus(status));
+        }
+        return result;
+    }
+
     /*
      * Parses the [TransactionRequestState] enum from transactionState string
      */
@@ -635,5 +710,49 @@ public class OperationsDetailedApi {
             stateList.add(parseState(state));
         }
         return stateList;
+    }
+
+    /*
+     * Returns respective [Transfer] specifications based on filter
+     * @param filter the filter we want to apply
+     * @param listOfValues the values to which we want to apply filter
+     */
+    private Specifications<Transfer> getTransferFilterSpecs(Filter filter, List<String> listOfValues) {
+        Specifications<Transfer> spec = null;
+        switch (filter) {
+            case TRANSACTIONID:
+                spec = TransferSpecs.in(Transfer_.transactionId, listOfValues);
+                break;
+            case PAYERID:
+                spec = TransferSpecs.in(Transfer_.payerPartyId, listOfValues);
+                break;
+            case PAYEEID:
+                spec = TransferSpecs.in(Transfer_.payeePartyId, listOfValues);
+                break;
+            case WORKFLOWINSTANCEKEY:
+                spec = TransferSpecs.in(Transfer_.workflowInstanceKey, listOfValues.stream().map(Long::parseLong).collect(Collectors.toList()));
+                break;
+            case STATE:
+                spec = TransferSpecs.in(Transfer_.status, parseStatuses(listOfValues));
+                break;
+            case CLIENTCORRELATIONID:
+                spec = TransferSpecs.in(Transfer_.clientCorrelationId, listOfValues);
+                break;
+            case PAYERDFSPID:
+                spec = TransferSpecs.in(Transfer_.amsBusinessShortCode, listOfValues);
+                break;
+        }
+        return spec;
+    }
+
+    /**
+     * Generate a CSV file name with the given prefix
+     * @param prefix the prefix of the file
+     * @return the generated file name
+     */
+    private String generateCsvFileName(String prefix) {
+        DateFormat dateFormatter = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
+        String currentDateTime = dateFormatter.format(new Date());
+        return prefix + currentDateTime + ".csv";
     }
 }

@@ -2,6 +2,8 @@ package org.apache.fineract.operations;
 
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Getter;
+import lombok.Setter;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.eclipse.persistence.annotations.Index;
 
@@ -49,8 +51,10 @@ public class Transfer extends AbstractPersistableCustom<Long> {
     @Column(name = "PAYEE_QUOTE_CODE")
     private String payeeQuoteCode;
 
+    @Getter
+    @Setter
     @Column(name = "PAYER_DFSP_ID")
-    private String payerDfspId;
+    private String amsBusinessShortCode;
     @Column(name = "PAYER_PARTY_ID")
     private String payerPartyId;
     @Column(name = "PAYER_PARTY_ID_TYPE")
@@ -223,14 +227,6 @@ public class Transfer extends AbstractPersistableCustom<Long> {
 
     public void setPayeeDfspId(String payeeDfspId) {
         this.payeeDfspId = payeeDfspId;
-    }
-
-    public String getPayerDfspId() {
-        return payerDfspId;
-    }
-
-    public void setPayerDfspId(String payerDfspId) {
-        this.payerDfspId = payerDfspId;
     }
 
     public String getCurrency() {

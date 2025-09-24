@@ -19,6 +19,7 @@
 package org.apache.fineract.organisation.staff;
 
 import org.apache.commons.lang3.StringUtils;
+import org.apache.fineract.config.CustomAuditingEntityListener;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.apache.fineract.organisation.document.Image;
 import org.apache.fineract.organisation.office.Office;
@@ -28,6 +29,8 @@ import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.JoinColumn;
 import javax.persistence.ManyToOne;
+import javax.persistence.EntityListeners;
+
 import javax.persistence.OneToOne;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
@@ -36,6 +39,7 @@ import java.util.Date;
 
 @Entity
 @Table(name = "m_staff")
+@EntityListeners(CustomAuditingEntityListener.class)
 public class Staff extends AbstractPersistableCustom<Long> {
 
     @Column(name = "firstname", length = 50)

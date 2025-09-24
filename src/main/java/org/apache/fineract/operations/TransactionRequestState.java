@@ -6,5 +6,6 @@ public enum TransactionRequestState {
     RECEIVED,
     ACCEPTED,
     REJECTED,
+    NOT_AUTOSAVED,
     FAILED;
 }

@@ -27,7 +27,7 @@ class AuditServiceTest {
     @BeforeEach
     void setUp() {
         auditSourceRepository = mock(AuditSourceRepository.class);
-        auditService = new AuditServiceImpl(auditSourceRepository);
+        auditService = new AuditServiceImpl(auditSourceRepository, null, null);
         dateUtil = new DateUtil();
     }
 
@@ -35,7 +35,7 @@ class AuditServiceTest {
     void testCreateNewEntry() {
         // Given
         LocalDateTime madeOn = dateUtil.getLocalDateTimeOfTenant(null);
-        NewAuditEvent event = new NewAuditEvent(this, 1, "CREATE", "AppUser", "", "data", mock(AppUser.class), "SUCCESS", madeOn);
+        NewAuditEvent event = new NewAuditEvent(this, 1L, "CREATE", "AppUser", "", "data", mock(AppUser.class), "SUCCESS", madeOn);
         AuditSource savedAudit = new AuditSource();
         when(auditSourceRepository.save(any(AuditSource.class))).thenReturn(savedAudit);
 

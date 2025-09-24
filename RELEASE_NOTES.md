@@ -1,5 +1,61 @@
 Release Notes
 
+
+## Version 1.1.6 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Transaction Requests
+            * [CP-3399] - Fix issue with payments incomming transactions not being returned
+
+## Version 1.1.5 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Transaction Requests
+            * [SER-3003] - Rename Payer DFSP Id to ‘AMS Business Short Code’ 
+
+## Version 1.1.4 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Audits
+            * [SER-3117] - Add audit fields on variables table
+
+## Version 1.1.3 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Audits
+            * [SER-3099] - Add audit fields on the transaction response
+
+## Version 1.1.2 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Audits
+            * [SER-2070] - Setup audit of user actions + add jpa auditing
+
+## Version 1.1.1 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Transaction Requests
+            * [SER-2990] - Add NOT_AUTOSAVED status for transaction requests
+
+## Version 1.1.0 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Transfers
+            * [SER-2925] - Create API for exporting transfers
+
+## Version 1.0.2 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Transaction Requests
+            * [SER-1596] - Filter incoming transactions by the MNO reference/externalId
+            * [SER-2208] - Fix bugs in searching incoming transactions in PaymentHub Service.
+
+## Version 1.0.1 - Up to date with Mifos Version 1.5.0
+
+    * Payment Hub OPs
+        * Transaction Requests
+            * [SER-1926] - Ensure the exported csv contains accurate data
+
 ## Version 1.0.0 - Up to date with Mifos Version 1.5.0
 
     * Payment Hub OPs

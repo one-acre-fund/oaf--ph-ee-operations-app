@@ -1,9 +1,6 @@
 package org.apache.fineract.operations;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.jpa.domain.Specifications;
-import org.springframework.stereotype.Component;
-import javax.persistence.EntityManager;
 import javax.persistence.criteria.*;
 import javax.persistence.metamodel.SingularAttribute;
 import java.util.Date;
@@ -37,17 +34,6 @@ public class TransactionRequestSpecs {
         return where((root, query, builder) -> builder.like(root.get(attribute.getName()), "%" + input + "%"));
     }
 
-    public static <T> Specifications<TransactionRequest> in(SingularAttribute<TransactionRequest, T> attribute, List<T> inputs) {
-        return where(((root, query, cb) -> {
-            final Path<T> group = root.get(attribute);
-            CriteriaBuilder.In<T> cr = cb.in(group);
-            for(T input: inputs ) {
-                cr.value(input);
-            }
-            return cr;
-        }));
-    }
-
     public static Specifications<TransactionRequest> filterByErrorDescription(List<String> errorDescriptions) {
         return where(((root, query, cb) -> {
             Join<Variable, TransactionRequest> txnVariables = root.join("variables");
@@ -62,6 +48,17 @@ public class TransactionRequestSpecs {
 
             return cb.and(cr, a);
         }));
+    }
+
+    /**
+     * Creates IN clause specification for {@link TransactionRequest}
+     * @param attribute attribute to be checked
+     * @param inputs list of inputs
+     * @return {@link Specifications<TransactionRequest>
+     * @param <T> type of the attribute
+     */
+    public static <T> Specifications<TransactionRequest> in(SingularAttribute<TransactionRequest, T> attribute, List<T> inputs) {
+        return Specs.in(attribute, inputs);
     }
 
 }
