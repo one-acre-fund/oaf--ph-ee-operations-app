@@ -34,9 +34,9 @@ steps:
       VariableName: Revision
 
   - task: JavaToolInstaller@0
-    displayName: 'Use Java 17'
+    displayName: 'Use Java 11'
     inputs:
-      versionSpec: '17'
+      versionSpec: '11'
       jdkArchitectureOption: 'x64'
       jdkSourceOption: 'PreInstalled'
 
@@ -58,7 +58,7 @@ steps:
       tasks: "bootJar :test --info --build-cache"
       publishJUnitResults: true
       javaHomeOption: "JDKVersion"
-      jdkVersionOption: "1.17"
+      jdkVersionOption: "1.11"
 
 
   - task: Docker@2
