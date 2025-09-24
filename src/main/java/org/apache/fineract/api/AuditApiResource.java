@@ -51,7 +51,7 @@ public class AuditApiResource {
         AuditSpec auditSpec = new AuditSpec();
         LocalDateTime parsedMakerDateFrom = null;
         LocalDateTime parsedMakerDateTo = null;
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(dateFormat);
+        DateTimeFormatter formatter = StringUtils.isNotBlank(dateFormat) ? DateTimeFormatter.ofPattern(dateFormat) : DateTimeFormatter.ISO_DATE_TIME;
         if(Objects.nonNull(makerDateTimeFrom)) {
             parsedMakerDateFrom = DateUtil.parseDateTime(makerDateTimeFrom, formatter);
         }

@@ -52,14 +52,12 @@ public class AuditSpec extends BaseSpecification<AuditSource, AuditSearch> {
         LocalDateTime endDateTime = request.getMakerDateTimeTo() != null
                 ? request.getMakerDateTimeTo().withHour(23).withMinute(59).withSecond(59).withNano(999999999)
                 : null;
-        if (startDateTime != null || endDateTime != null) {
-            if (startDateTime == null) {
-                startDateTime = LocalDateTime.MIN;
-            }
-            if (endDateTime == null) {
-                endDateTime = LocalDateTime.now();
-            }
+        if (startDateTime != null && endDateTime != null) {
             predicates.add(cb.between(root.get("madeOnDate"), startDateTime, endDateTime));
+        } else if (startDateTime != null) {
+            predicates.add(cb.greaterThanOrEqualTo(root.get("madeOnDate"), startDateTime));
+        } else if (endDateTime != null) {
+            predicates.add(cb.lessThanOrEqualTo(root.get("madeOnDate"), endDateTime));
         }
     }
 
@@ -83,7 +81,7 @@ public class AuditSpec extends BaseSpecification<AuditSource, AuditSearch> {
 
     private void addMakerIdFilterPredicate(AuditSearch request, Root<AuditSource> root, CriteriaBuilder cb, List<Predicate> predicates) {
         if (request.getMakerId() != null) {
-            predicates.add(cb.equal(root.get("maker"), request.getMakerId()));
+            predicates.add(cb.equal(root.get("maker").get("id"), request.getMakerId()));
         }
     }
 
