@@ -46,7 +46,7 @@ steps:
       tasks: "bootJar :test --info --build-cache"
       publishJUnitResults: true
       javaHomeOption: "JDKVersion"
-      jdkVersionOption: "1.11"
+      jdkVersionOption: "1.8"
       # codeCoverageToolOption: 'JaCoCo'
       classFilesDirectories: build/classes/java/main/
       sonarQubeRunAnalysis: false
