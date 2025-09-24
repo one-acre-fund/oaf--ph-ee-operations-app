@@ -28,6 +28,13 @@ steps:
     inputs:
       VariableName: Revision
 
+  - task: JavaToolInstaller@0
+    displayName: 'Use Java 17'
+    inputs:
+      versionSpec: '17'
+      jdkArchitectureOption: 'x64'
+      jdkSourceOption: 'PreInstalled'
+
   - script: |
       VERSION_TAG=`git describe --abbrev=0 --tags`
       echo "##vso[task.setvariable variable=VERSION_TAG]$VERSION_TAG"
