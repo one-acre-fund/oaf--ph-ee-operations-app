@@ -3,9 +3,9 @@ Release Notes
 ## Version 1.1.7 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * Authentication and Security
-            * [SER-3662] - Add  Keycloak integration for authentication and authorization
+            * [CP-3662] - Add  Keycloak integration for authentication and authorization
         * Miscellaneous
-            * [SER-3757] - Switch CI build to GitHub Actions & Update to Java 17
+            * [CP-3757] - Switch CI build to GitHub Actions
 ## Version 1.1.6 - Up to date with Mifos Version 1.5.0
 
     * Payment Hub OPs

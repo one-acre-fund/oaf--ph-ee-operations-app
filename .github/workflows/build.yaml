@@ -39,7 +39,7 @@ jobs:
     - name: Set up Java Version
       uses: actions/setup-java@v4.7.0
       with:
-        java-version: "17"
+        java-version: "11"
         distribution: "temurin"
         
     - name: Get Revision
@@ -104,7 +104,7 @@ jobs:
       - name: Set up Java Version
         uses: actions/setup-java@v4.7.0
         with:
-          java-version: "17"
+          java-version: "11"
           distribution: "temurin"
 
       - name: Cache SonarCloud packages
