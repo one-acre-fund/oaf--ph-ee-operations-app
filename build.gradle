@@ -59,7 +59,7 @@ dependencies {
 
 group = 'org.apache.fineract'
 version = 'v1.1.7'
-sourceCompatibility = '1.8'
+sourceCompatibility = '17'
 
 
 sourceSets {
