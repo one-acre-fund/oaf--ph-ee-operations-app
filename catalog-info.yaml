@@ -1,0 +1,55 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ph-ee-operations-app
+  title: PH Operations App
+  description: A microservice that provides backend APIs to manage transactions in PaymentHub
+  annotations:
+    github.com/project-slug: one-acre-fund/ph-ee-operations-app
+    backstage.io/techdocs-ref: dir:.
+    sonarqube.org/project-key: one-acre-fund_ph-ee-operations-app
+    dev.azure.com/project-repo: OAFDev/prd-pipelines
+    backstage.io/code-coverage: sonarqube
+  tags:
+    - microfinance
+    - financial-services
+    - payments
+    - paymenthub
+    - operations-app
+    - ams
+    - mobile-money
+    - api
+    - java
+    - spring-boot
+    - one-acre-fund
+  links:
+    - url:
+      title: API Documentation
+      icon: docs
+    - url: https://sonarcloud.io/summary/new_code?id=one-acre-fund_ph-ee-operations-app
+      title: Code Quality Dashboard
+      icon: dashboard
+    - url:
+      title: Build Pipeline
+      icon: build
+    - url:
+      title: Docker Images
+      icon: docker
+    - url:
+      title: APM Monitoring
+      icon: apm
+    - url:
+      title: Ingress Logs
+      icon: logs
+    - url:
+      title: Stability Dashboard
+      icon: dashboard
+    - url: https://ph-web.oneacrefund.org
+      title: Production Environment
+      icon: globe
+spec:
+  type: service
+  lifecycle: production
+  owner: team-credit-and-payments
+  system: paymenthub
+  consumesApis: []
