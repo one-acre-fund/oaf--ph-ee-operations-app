@@ -28,6 +28,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,7 +40,7 @@ import java.util.Map;
 @Service
 public class TenantDatabaseUpgradeService {
 
-    private final Logger logger = LoggerFactory.getLogger(this.getClass());
+    public final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
     private TenantServerConnectionRepository repository;
@@ -45,22 +49,22 @@ public class TenantDatabaseUpgradeService {
     private DataSourcePerTenantService dataSourcePerTenantService;
 
     @Value("${fineract.datasource.core.host}")
-    private String hostname;
+    public String hostname;
 
     @Value("${fineract.datasource.core.port}")
-    private int port;
+    public int port;
 
     @Value("${fineract.datasource.core.username}")
-    private String username;
+    public String username;
 
     @Value("${fineract.datasource.core.password}")
-    private String password;
+    public String password;
 
     @Value("${fineract.datasource.common.protocol}")
-    private String jdbcProtocol;
+    public String jdbcProtocol;
 
     @Value("${fineract.datasource.common.subprotocol}")
-    private String jdbcSubprotocol;
+    public String jdbcSubprotocol;
 
     @Value("${fineract.datasource.common.driverclass_name}")
     private String driverClass;
@@ -78,13 +82,33 @@ public class TenantDatabaseUpgradeService {
     private String channelClientSecret;
 
     @Value("#{'${tenants}'.split(',')}")
-    private List<String> tenants;
+    public List<String> tenants;
 
     @PostConstruct
     public void setupEnvironment() {
         flywayDefaultSchema();
+        createTenantsIfNotExists();
         insertTenants();
         flywayTenants();
+    }
+
+    protected Connection createConnection(String url, String username, String password) throws SQLException {
+        return DriverManager.getConnection(url, username, password);
+    }
+
+    public void createTenantsIfNotExists() {
+        String jdbcUrl = jdbcProtocol + ":" + jdbcSubprotocol + "://" + hostname + ":" + port + "/";
+        for (String tenant : tenants) {
+            try (Connection conn = createConnection(jdbcUrl, username, password);
+                 Statement stmt = conn.createStatement()) {
+
+                String sql = "CREATE DATABASE IF NOT EXISTS `" + tenant + "`";
+                stmt.executeUpdate(sql);
+                logger.info("Database checked/created for tenant: {}", tenant);
+            } catch (SQLException e) {
+                logger.error("Error creating or migrating tenant database: {}", tenant, e);
+            }
+        }
     }
 
     private void flywayTenants() {
@@ -96,6 +120,7 @@ public class TenantDatabaseUpgradeService {
                     fw.setDataSource(dataSourcePerTenantService.retrieveDataSource());
                     fw.setLocations("sql/migrations/tenant");
                     fw.setInitOnMigrate(true);
+                    fw.setSchemas(tenant.getSchemaName());
                     fw.setOutOfOrder(true);
                     Map<String, String> placeholders = new HashMap<>();
                     placeholders.put("tenantDatabase", tenant.getSchemaName()); // add tenant as aud claim

@@ -6,6 +6,8 @@ Release Notes
             * [CP-3662] - Add  Keycloak integration for authentication and authorization
         * Miscellaneous
             * [CP-3757] - Switch CI build to GitHub Actions
+        * Multi-tenancy
+            * [CP-3874] - Database check/creation per tenant during application startup
 ## Version 1.1.6 - Up to date with Mifos Version 1.5.0
 
     * Payment Hub OPs

@@ -7,6 +7,7 @@ import org.apache.fineract.audit.service.AuditService;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
+import org.keycloak.KeycloakPrincipal;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
@@ -57,7 +58,8 @@ public class CustomAuditingEntityListener extends AuditingEntityListener {
     private AppUser getCurrentUser() {
         AppUserRepository appUserRepository = getBean(AppUserRepository.class);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null ? appUserRepository.findAppUserByName(authentication.getName()): null;
+        KeycloakPrincipal<?> principal = (KeycloakPrincipal<?>)authentication.getPrincipal();
+        return appUserRepository.findAppUserByName(principal.getKeycloakSecurityContext().getToken().getPreferredUsername());
     }
 
     private String getObjectString(Object entity) {
