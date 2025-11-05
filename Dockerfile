@@ -1,4 +1,4 @@
-FROM openjdk:8
+FROM amazoncorretto:8
 EXPOSE 5000
 
 COPY build/libs/*.jar .
