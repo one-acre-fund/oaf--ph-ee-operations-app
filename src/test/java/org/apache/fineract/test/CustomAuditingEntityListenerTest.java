@@ -19,16 +19,19 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 
-public class CustomAuditingEntityListenerTest {
+class CustomAuditingEntityListenerTest {
     @Mock
     private AppUserRepository appUserRepository;
     @Mock
@@ -48,7 +51,7 @@ public class CustomAuditingEntityListenerTest {
     }
 
     @Test
-    public void testGetCurrentUser_authenticatedKeycloakPrincipal_returnsAppUser() {
+    void testGetCurrentUser_authenticatedKeycloakPrincipal_returnsAppUser() {
         CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
         AppUser expectedUser = mock(AppUser.class);
         KeycloakSecurityContext keycloakSecurityContext = mock(KeycloakSecurityContext.class);
@@ -70,7 +73,7 @@ public class CustomAuditingEntityListenerTest {
     }
 
     @Test
-    public void testGetCurrentUser_nullAuthentication_returnsNull() {
+    void testGetCurrentUser_nullAuthentication_returnsNull() {
         CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
         try (MockedStatic<SecurityContextHolder> schMock = mockStatic(SecurityContextHolder.class);
              MockedStatic<BeanUtil> beanUtilMock = mockStatic(BeanUtil.class)) {
@@ -83,7 +86,7 @@ public class CustomAuditingEntityListenerTest {
     }
 
     @Test
-    public void testGetCurrentUser_nonKeycloakPrincipal_returnsNull() {
+    void testGetCurrentUser_nonKeycloakPrincipal_returnsNull() {
         CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
         when(authentication.getPrincipal()).thenReturn("notKeycloakPrincipal");
         try (MockedStatic<SecurityContextHolder> schMock = mockStatic(SecurityContextHolder.class);
@@ -97,7 +100,7 @@ public class CustomAuditingEntityListenerTest {
     }
 
     @Test
-    public void testGetCurrentUser_keycloakPrincipalMissingUsername_returnsNull() {
+    void testGetCurrentUser_keycloakPrincipalMissingUsername_returnsNull() {
         CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
         KeycloakSecurityContext keycloakSecurityContext = mock(KeycloakSecurityContext.class);
         org.keycloak.representations.AccessToken token = mock(org.keycloak.representations.AccessToken.class);
@@ -119,14 +122,17 @@ public class CustomAuditingEntityListenerTest {
     @Test
     public void testLogAction_entityIsAuditSource_returnsImmediately() {
         CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
+        AuditService auditService = mock(AuditService.class);
         AuditSource auditSource = mock(AuditSource.class);
-
-        // Should just return without calling anything
-        listener.logAction("CREATE", auditSource);
+        try (MockedStatic<BeanUtil> beanUtilMock = mockStatic(BeanUtil.class)) {
+            beanUtilMock.when(() -> BeanUtil.getBean(AuditService.class)).thenReturn(auditService);
+            listener.logAction("CREATE", auditSource);
+            verify(auditService, never()).createNewEntry(any(NewAuditEvent.class));
+        }
     }
 
     @Test
-    public void testLogAction_validEntity_createsAuditEventSuccessfully() {
+    void testLogAction_validEntity_createsAuditEventSuccessfully() {
         CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
         AuditService auditService = mock(AuditService.class);
         Object entity = new Object();
@@ -142,7 +148,7 @@ public class CustomAuditingEntityListenerTest {
     }
 
     @Test
-    public void testLogAction_beanUtilThrowsException_logsError() {
+    void testLogAction_beanUtilThrowsException_logsError() {
         CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
         Object entity = new Object();
 
@@ -164,12 +170,18 @@ public class CustomAuditingEntityListenerTest {
 
         try (MockedStatic<BeanUtil> beanUtilMock = mockStatic(BeanUtil.class)) {
             beanUtilMock.when(() -> BeanUtil.getBean(AuditService.class)).thenReturn(auditService);
+
+            // Simulate exception thrown by the service
             doThrow(new RuntimeException("DB error")).when(auditService).createNewEntry(any(NewAuditEvent.class));
 
-            // Should catch and log exception, not propagate
-            listener.logAction("SAVE", entity);
+            // Execute (should not throw)
+            assertDoesNotThrow(() -> listener.logAction("SAVE", entity));
+
+            // ✅ Assert that the service was indeed called once
+            verify(auditService, times(1)).createNewEntry(any(NewAuditEvent.class));
         }
     }
+
 
 }
 
