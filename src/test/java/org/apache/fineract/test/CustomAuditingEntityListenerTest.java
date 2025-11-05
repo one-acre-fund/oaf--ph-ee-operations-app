@@ -41,12 +41,12 @@ class CustomAuditingEntityListenerTest {
     private AutoCloseable mocks;
 
     @BeforeEach
-    public void setUp() {
+    void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
     }
 
     @AfterEach
-    public void tearDown() throws Exception {
+    void tearDown() throws Exception {
         if (mocks != null) mocks.close();
     }
 
@@ -120,7 +120,7 @@ class CustomAuditingEntityListenerTest {
     }
 
     @Test
-    public void testLogAction_entityIsAuditSource_returnsImmediately() {
+    void testLogAction_entityIsAuditSource_returnsImmediately() {
         CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
         AuditService auditService = mock(AuditService.class);
         AuditSource auditSource = mock(AuditSource.class);
@@ -163,7 +163,7 @@ class CustomAuditingEntityListenerTest {
     }
 
     @Test
-    public void testLogAction_auditServiceThrowsException_logsError() {
+    void testLogAction_auditServiceThrowsException_logsError() {
         CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
         AuditService auditService = mock(AuditService.class);
         Object entity = new Object();
