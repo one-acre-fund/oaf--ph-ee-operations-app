@@ -96,6 +96,7 @@ public class TenantDatabaseUpgradeService {
                     fw.setDataSource(dataSourcePerTenantService.retrieveDataSource());
                     fw.setLocations("sql/migrations/tenant");
                     fw.setInitOnMigrate(true);
+                    fw.setSchemas(tenant.getSchemaName());
                     fw.setOutOfOrder(true);
                     Map<String, String> placeholders = new HashMap<>();
                     placeholders.put("tenantDatabase", tenant.getSchemaName()); // add tenant as aud claim

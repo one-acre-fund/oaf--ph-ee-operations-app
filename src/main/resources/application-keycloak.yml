@@ -114,4 +114,4 @@ channel-connector:
   url: http://bb-connector-channel.mifos.io
   transfer-path: /channel/transfer
 
-tenants: "oaf"
+tenants: "oaf,kenya,rwanda,burundi,malawi,usa,zambia,nigeria"
