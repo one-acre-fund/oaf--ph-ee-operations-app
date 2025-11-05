@@ -1,12 +1,15 @@
 package org.apache.fineract.test;
 
+import org.apache.fineract.audit.data.AuditSource;
+import org.apache.fineract.audit.events.NewAuditEvent;
+import org.apache.fineract.audit.service.AuditService;
 import org.apache.fineract.config.BeanUtil;
 import org.apache.fineract.config.CustomAuditingEntityListener;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.keycloak.KeycloakPrincipal;
 import org.keycloak.KeycloakSecurityContext;
 import org.mockito.Mock;
@@ -16,8 +19,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import static org.mockito.Mockito.*;
-import static org.junit.Assert.*;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class CustomAuditingEntityListenerTest {
     @Mock
@@ -28,12 +37,12 @@ public class CustomAuditingEntityListenerTest {
     private SecurityContext securityContext;
     private AutoCloseable mocks;
 
-    @Before
+    @BeforeEach
     public void setUp() {
         mocks = MockitoAnnotations.openMocks(this);
     }
 
-    @After
+    @AfterEach
     public void tearDown() throws Exception {
         if (mocks != null) mocks.close();
     }
@@ -106,5 +115,61 @@ public class CustomAuditingEntityListenerTest {
             assertNull(result);
         }
     }
+
+    @Test
+    public void testLogAction_entityIsAuditSource_returnsImmediately() {
+        CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
+        AuditSource auditSource = mock(AuditSource.class);
+
+        // Should just return without calling anything
+        listener.logAction("CREATE", auditSource);
+    }
+
+    @Test
+    public void testLogAction_validEntity_createsAuditEventSuccessfully() {
+        CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
+        AuditService auditService = mock(AuditService.class);
+        Object entity = new Object();
+
+        try (MockedStatic<BeanUtil> beanUtilMock = mockStatic(BeanUtil.class)) {
+            beanUtilMock.when(() -> BeanUtil.getBean(AuditService.class)).thenReturn(auditService);
+
+            listener.logAction("UPDATE", entity);
+
+            // Verify that an audit event was created successfully
+            verify(auditService).createNewEntry(any(NewAuditEvent.class));
+        }
+    }
+
+    @Test
+    public void testLogAction_beanUtilThrowsException_logsError() {
+        CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
+        Object entity = new Object();
+
+        try (MockedStatic<BeanUtil> beanUtilMock = mockStatic(BeanUtil.class)) {
+            // Simulate an exception when retrieving the bean
+            beanUtilMock.when(() -> BeanUtil.getBean(AuditService.class))
+                    .thenThrow(new RuntimeException("Bean not found"));
+
+            // Should catch and log exception, not propagate
+            listener.logAction("DELETE", entity);
+        }
+    }
+
+    @Test
+    public void testLogAction_auditServiceThrowsException_logsError() {
+        CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
+        AuditService auditService = mock(AuditService.class);
+        Object entity = new Object();
+
+        try (MockedStatic<BeanUtil> beanUtilMock = mockStatic(BeanUtil.class)) {
+            beanUtilMock.when(() -> BeanUtil.getBean(AuditService.class)).thenReturn(auditService);
+            doThrow(new RuntimeException("DB error")).when(auditService).createNewEntry(any(NewAuditEvent.class));
+
+            // Should catch and log exception, not propagate
+            listener.logAction("SAVE", entity);
+        }
+    }
+
 }
 

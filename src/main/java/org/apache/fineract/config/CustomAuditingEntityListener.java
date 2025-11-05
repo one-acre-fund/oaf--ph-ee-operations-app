@@ -39,13 +39,18 @@ public class CustomAuditingEntityListener extends AuditingEntityListener {
     public void onPreRemove(Object entity) {
         logAction("DELETE", entity);
     }
-    private void logAction(String action, Object entity) {
+
+    public void logAction(String action, Object entity) {
         if(entity instanceof AuditSource) {
             return;
         }
-        NewAuditEvent event = new NewAuditEvent(this, getEntityId(entity), action, entity.getClass().getSimpleName(), null, getObjectString(entity), getCurrentUser(), "SUCCESS", LocalDateTime.now());
-        AuditService auditService = BeanUtil.getBean(AuditService.class);
-        auditService.createNewEntry(event);
+        try {
+            NewAuditEvent event = new NewAuditEvent(this, getEntityId(entity), action, entity.getClass().getSimpleName(), null, getObjectString(entity), getCurrentUser(), "SUCCESS", LocalDateTime.now());
+            AuditService auditService = BeanUtil.getBean(AuditService.class);
+            auditService.createNewEntry(event);
+        } catch (Exception ex) {
+            log.error("Failed to log audit event for action {} on entity {}: {}", action, entity.getClass().getSimpleName(), ex.getMessage());
+        }
     }
 
     private Long getEntityId(Object entity) {
@@ -58,8 +63,23 @@ public class CustomAuditingEntityListener extends AuditingEntityListener {
     public AppUser getCurrentUser() {
         AppUserRepository appUserRepository = getBean(AppUserRepository.class);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        KeycloakPrincipal<?> principal = (KeycloakPrincipal<?>)authentication.getPrincipal();
-        return appUserRepository.findAppUserByName(principal.getKeycloakSecurityContext().getToken().getPreferredUsername());    }
+        if (authentication == null) {
+            return null;
+        }
+        Object principalObj = authentication.getPrincipal();
+        if (!(principalObj instanceof KeycloakPrincipal)) {
+            return null;
+        }
+        KeycloakPrincipal<?> principal = (KeycloakPrincipal<?>) principalObj;
+        String username = null;
+        if (principal.getKeycloakSecurityContext() != null && principal.getKeycloakSecurityContext().getToken() != null) {
+            username = principal.getKeycloakSecurityContext().getToken().getPreferredUsername();
+        }
+        if (username == null) {
+            return null;
+        }
+        return appUserRepository.findAppUserByName(username);
+    }
 
     private String getObjectString(Object entity) {
         return Optional.ofNullable(entity)
