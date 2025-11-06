@@ -7,6 +7,7 @@ import org.apache.fineract.audit.service.AuditService;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
+import org.keycloak.KeycloakPrincipal;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import javax.persistence.*;
@@ -38,13 +39,18 @@ public class CustomAuditingEntityListener extends AuditingEntityListener {
     public void onPreRemove(Object entity) {
         logAction("DELETE", entity);
     }
-    private void logAction(String action, Object entity) {
+
+    public void logAction(String action, Object entity) {
         if(entity instanceof AuditSource) {
             return;
         }
-        NewAuditEvent event = new NewAuditEvent(this, getEntityId(entity), action, entity.getClass().getSimpleName(), null, getObjectString(entity), getCurrentUser(), "SUCCESS", LocalDateTime.now());
-        AuditService auditService = BeanUtil.getBean(AuditService.class);
-        auditService.createNewEntry(event);
+        try {
+            NewAuditEvent event = new NewAuditEvent(this, getEntityId(entity), action, entity.getClass().getSimpleName(), null, getObjectString(entity), getCurrentUser(), "SUCCESS", LocalDateTime.now());
+            AuditService auditService = BeanUtil.getBean(AuditService.class);
+            auditService.createNewEntry(event);
+        } catch (Exception ex) {
+            log.error("Failed to log audit event for action {} on entity {}: {}", action, entity.getClass().getSimpleName(), ex.getMessage());
+        }
     }
 
     private Long getEntityId(Object entity) {
@@ -54,10 +60,25 @@ public class CustomAuditingEntityListener extends AuditingEntityListener {
         return null;
     }
 
-    private AppUser getCurrentUser() {
+    public AppUser getCurrentUser() {
         AppUserRepository appUserRepository = getBean(AppUserRepository.class);
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        return authentication != null ? appUserRepository.findAppUserByName(authentication.getName()): null;
+        if (authentication == null) {
+            return null;
+        }
+        Object principalObj = authentication.getPrincipal();
+        if (!(principalObj instanceof KeycloakPrincipal)) {
+            return null;
+        }
+        KeycloakPrincipal<?> principal = (KeycloakPrincipal<?>) principalObj;
+        String username = null;
+        if (principal.getKeycloakSecurityContext() != null && principal.getKeycloakSecurityContext().getToken() != null) {
+            username = principal.getKeycloakSecurityContext().getToken().getPreferredUsername();
+        }
+        if (username == null) {
+            return null;
+        }
+        return appUserRepository.findAppUserByName(username);
     }
 
     private String getObjectString(Object entity) {
