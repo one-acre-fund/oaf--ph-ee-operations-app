@@ -28,6 +28,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,44 +49,45 @@ public class TenantDatabaseUpgradeService {
     private DataSourcePerTenantService dataSourcePerTenantService;
 
     @Value("${fineract.datasource.core.host}")
-    private String hostname;
+    public String hostname;
 
     @Value("${fineract.datasource.core.port}")
-    private int port;
+    public int port;
 
     @Value("${fineract.datasource.core.username}")
-    private String username;
+    public String username;
 
     @Value("${fineract.datasource.core.password}")
-    private String password;
+    public String password;
 
     @Value("${fineract.datasource.common.protocol}")
-    private String jdbcProtocol;
+    public String jdbcProtocol;
 
     @Value("${fineract.datasource.common.subprotocol}")
-    private String jdbcSubprotocol;
+    public String jdbcSubprotocol;
 
     @Value("${fineract.datasource.common.driverclass_name}")
-    private String driverClass;
+    public String driverClass;
 
     @Value("${token.user.access-validity-seconds}")
-    private String userTokenAccessValiditySeconds;
+    public String userTokenAccessValiditySeconds;
 
     @Value("${token.user.refresh-validity-seconds}")
-    private String userTokenRefreshValiditySeconds;
+    public String userTokenRefreshValiditySeconds;
 
     @Value("${token.client.access-validity-seconds}")
-    private String clientAccessTokenValidity;
+    public String clientAccessTokenValidity;
 
     @Value("${token.client.channel.secret}")
-    private String channelClientSecret;
+    public String channelClientSecret;
 
     @Value("#{'${tenants}'.split(',')}")
-    private List<String> tenants;
+    public List<String> tenants;
 
     @PostConstruct
     public void setupEnvironment() {
         flywayDefaultSchema();
+        createTenantsIfNotExists();
         insertTenants();
         flywayTenants();
     }
@@ -139,5 +144,41 @@ public class TenantDatabaseUpgradeService {
         fw.setInitOnMigrate(true);
         fw.setOutOfOrder(true);
         fw.migrate();
+    }
+
+    /**
+     * Create tenant databases if they do not already exist.
+     */
+    public void createTenantsIfNotExists() {
+        String jdbcUrl = jdbcProtocol + ":" + jdbcSubprotocol + "://" + hostname + ":" + port + "/mysql";
+        if (tenants == null || tenants.isEmpty()) { return; }
+        for (String raw : tenants) {
+           if (raw == null) { continue; }
+           String tenant = raw.trim();
+           if (tenant.isEmpty() || !tenant.matches("^[A-Za-z0-9_]+$")) {
+               logger.warn("Skipping invalid tenant identifier: '{}'", raw);
+               continue;
+           }
+           try (Connection conn = createConnection(jdbcUrl, username, password); Statement stmt = conn.createStatement()) {
+               String sql = "CREATE DATABASE IF NOT EXISTS `" + tenant + "`";
+               stmt.executeUpdate(sql);
+               logger.info("Database checked/created for tenant: {}", tenant);
+           } catch (SQLException e) {
+               logger.error("Error creating or migrating tenant database: {}", tenant, e);
+           }
+       }
+    }
+
+    /**
+     * Create a database connection.
+     *
+     * @param url      the database URL
+     * @param username the database username
+     * @param password the database password
+     * @return the database connection
+     * @throws SQLException if a database access error occurs
+     */
+    public Connection createConnection(String url, String username, String password) throws SQLException {
+        return DriverManager.getConnection(url, username, password);
     }
 }
