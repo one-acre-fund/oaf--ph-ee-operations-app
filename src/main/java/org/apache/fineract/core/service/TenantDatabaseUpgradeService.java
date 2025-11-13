@@ -49,40 +49,40 @@ public class TenantDatabaseUpgradeService {
     private DataSourcePerTenantService dataSourcePerTenantService;
 
     @Value("${fineract.datasource.core.host}")
-    public String hostname;
+    private String hostname;
 
     @Value("${fineract.datasource.core.port}")
-    public int port;
+    private int port;
 
     @Value("${fineract.datasource.core.username}")
-    public String username;
+    private String username;
 
     @Value("${fineract.datasource.core.password}")
-    public String password;
+    private String password;
 
     @Value("${fineract.datasource.common.protocol}")
-    public String jdbcProtocol;
+    private String jdbcProtocol;
 
     @Value("${fineract.datasource.common.subprotocol}")
-    public String jdbcSubprotocol;
+    private String jdbcSubprotocol;
 
     @Value("${fineract.datasource.common.driverclass_name}")
-    public String driverClass;
+    private String driverClass;
 
     @Value("${token.user.access-validity-seconds}")
-    public String userTokenAccessValiditySeconds;
+    private String userTokenAccessValiditySeconds;
 
     @Value("${token.user.refresh-validity-seconds}")
-    public String userTokenRefreshValiditySeconds;
+    private String userTokenRefreshValiditySeconds;
 
     @Value("${token.client.access-validity-seconds}")
-    public String clientAccessTokenValidity;
+    private String clientAccessTokenValidity;
 
     @Value("${token.client.channel.secret}")
-    public String channelClientSecret;
+    private String channelClientSecret;
 
     @Value("#{'${tenants}'.split(',')}")
-    public List<String> tenants;
+    private List<String> tenants;
 
     @PostConstruct
     public void setupEnvironment() {

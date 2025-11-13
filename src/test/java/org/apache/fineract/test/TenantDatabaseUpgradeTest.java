@@ -42,13 +42,14 @@ class TenantDatabaseUpgradeTest {
         statement = Mockito.mock(Statement.class);
 
         TenantDatabaseUpgradeService realService = new TenantDatabaseUpgradeService();
-        realService.username = username;
-        realService.password = password;
-        realService.hostname = hostname;
-        realService.port = port;
-        realService.jdbcProtocol = jdbcProtocol;
-        realService.jdbcSubprotocol = jdbcSubprotocol;
-        realService.tenants = tenants;
+
+        ReflectionTestUtils.setField(realService, "username", username);
+        ReflectionTestUtils.setField(realService, "password", password);
+        ReflectionTestUtils.setField(realService, "hostname", hostname);
+        ReflectionTestUtils.setField(realService, "port", port);
+        ReflectionTestUtils.setField(realService, "jdbcProtocol", jdbcProtocol);
+        ReflectionTestUtils.setField(realService, "jdbcSubprotocol", jdbcSubprotocol);
+        ReflectionTestUtils.setField(realService, "tenants", tenants);
 
         tenantDatabaseCreator = Mockito.spy(realService);
         when(connection.createStatement()).thenReturn(statement);
@@ -83,7 +84,7 @@ class TenantDatabaseUpgradeTest {
     @Test
     @DisplayName("Returns early when tenants list is null")
     void shouldNotRunWhenTenantsIsNull() throws Exception {
-        tenantDatabaseCreator.tenants = null;
+        ReflectionTestUtils.setField(tenantDatabaseCreator, "tenants", null);
         tenantDatabaseCreator.createTenantsIfNotExists();
         Mockito.verify(tenantDatabaseCreator, Mockito.never())
                 .createConnection(Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
@@ -104,7 +105,7 @@ class TenantDatabaseUpgradeTest {
     @Test
     @DisplayName("Skips null, empty, and invalid tenant identifiers")
     void shouldSkipNullAndInvalidTenantIdentifiers() throws Exception {
-        tenantDatabaseCreator.tenants = Arrays.asList("tenant1", null, "", "bad-name!", "tenant2");
+        ReflectionTestUtils.setField(tenantDatabaseCreator, "tenants", Arrays.asList("tenant1", null, "", "bad-name!", "tenant2"));
         when(statement.executeUpdate(anyString())).thenReturn(1);
         tenantDatabaseCreator.createTenantsIfNotExists();
         verify(statement, times(2)).executeUpdate(anyString());
@@ -117,7 +118,7 @@ class TenantDatabaseUpgradeTest {
     @Test
     @DisplayName("Trims tenant identifiers and skips empty after trim")
     void shouldTrimTenantIdentifiersBeforeUse() throws Exception {
-        tenantDatabaseCreator.tenants = Arrays.asList("  tenant1  ", "   "); // second becomes empty after trim
+        ReflectionTestUtils.setField(tenantDatabaseCreator, "tenants", Arrays.asList("  tenant1  ", "   ")); // second becomes empty after trim
         when(statement.executeUpdate(anyString())).thenReturn(1);
         tenantDatabaseCreator.createTenantsIfNotExists();
         verify(statement, times(1))
@@ -129,7 +130,7 @@ class TenantDatabaseUpgradeTest {
     @Test
     @DisplayName("Returns early when tenants list is empty")
     void shouldReturnEarlyWhenTenantsEmpty() throws Exception {
-        tenantDatabaseCreator.tenants = Arrays.asList();
+        ReflectionTestUtils.setField(tenantDatabaseCreator, "tenants", Arrays.asList());
         tenantDatabaseCreator.createTenantsIfNotExists();
         Mockito.verify(tenantDatabaseCreator, Mockito.never())
                 .createConnection(Mockito.anyString(), Mockito.anyString(), Mockito.anyString());
