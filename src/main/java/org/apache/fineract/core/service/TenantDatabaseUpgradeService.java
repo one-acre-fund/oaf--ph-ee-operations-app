@@ -150,7 +150,7 @@ public class TenantDatabaseUpgradeService {
      * Create tenant databases if they do not already exist.
      */
     public void createTenantsIfNotExists() {
-        String jdbcUrl = jdbcProtocol + ":" + jdbcSubprotocol + "://" + hostname + ":" + port + "/mysql";
+        String jdbcUrl = jdbcProtocol + ":" + jdbcSubprotocol + "://" + hostname + ":" + port + "/" + jdbcSubprotocol;
         if (tenants == null || tenants.isEmpty()) { return; }
         for (String raw : tenants) {
            if (raw == null) { continue; }
