@@ -1,4 +1,4 @@
-FROM amazoncorretto:8
+FROM eclipse-temurin:11
 EXPOSE 5000
 
 COPY build/libs/*.jar .
