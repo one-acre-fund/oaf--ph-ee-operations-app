@@ -1,111 +1,157 @@
 package org.apache.fineract.test;
 
-import org.apache.commons.lang3.tuple.Pair;
 import org.apache.fineract.config.security.service.KeycloakUserCreationService;
-import org.apache.fineract.organisation.permission.Permission;
-import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.user.AppUser;
+import org.apache.fineract.organisation.user.AppUserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.springframework.security.core.GrantedAuthority;
+import org.mockito.ArgumentCaptor;
+import org.mockito.MockitoAnnotations;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Collections;
-import java.util.List;
+import java.lang.reflect.Method;
+import java.time.LocalDateTime;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class KeycloakUserCreationServiceTest {
+    private AutoCloseable mocks;
+
+    private AppUserRepository appUserRepository;
+    private PasswordEncoder passwordEncoder;
 
     private KeycloakUserCreationService service;
 
     @BeforeEach
     void setUp() {
+        mocks = MockitoAnnotations.openMocks(this);
+        appUserRepository = mock(AppUserRepository.class);
+        passwordEncoder = mock(PasswordEncoder.class);
         service = new KeycloakUserCreationService();
-    }
-
-    @Test
-    @DisplayName("Should resolve authorities and permission names from user details")
-    void resolveAuthoritiesFromUserDetails() {
-        Permission perm1 = new Permission();
-        perm1.setCode("READ_CLIENT");
-
-        Permission perm2 = new Permission();
-        perm2.setCode("WRITE_CLIENT");
-
-        Permission perm3 = new Permission();
-        perm3.setCode("DELETE_CLIENT");
-
-        Role role1 = new Role();
-        Set<Permission> perms1 = new HashSet<>();
-        perms1.add(perm1);
-        perms1.add(perm2);
-        role1.setPermissions(perms1);
-
-        Role role2 = new Role();
-        Set<Permission> perms2 = new HashSet<>();
-        perms2.add(perm3);
-        role2.setPermissions(perms2);
-
-        AppUser user = new AppUser();
-        List<Role> roles = new ArrayList<>();
-        roles.add(role1);
-        roles.add(role2);
-        user.setRoles(roles);
-
-        Pair<Collection<GrantedAuthority>, Set<String>> result = service.resolveAuthoritiesFromUserDetails(user);
-
-        assertNotNull(result);
-        assertEquals(3, result.getLeft().size());
-        assertEquals(3, result.getRight().size());
-
-        List<String> authorityList = new ArrayList<>();
-        for (GrantedAuthority auth : result.getLeft()) {
-            authorityList.add(auth.getAuthority());
+        // inject mocks via reflection since fields are @Autowired
+        try {
+            var appRepoField = KeycloakUserCreationService.class.getDeclaredField("appuserRepository");
+            appRepoField.setAccessible(true);
+            appRepoField.set(service, appUserRepository);
+            var encoderField = KeycloakUserCreationService.class.getDeclaredField("passwordEncoder");
+            encoderField.setAccessible(true);
+            encoderField.set(service, passwordEncoder);
+        } catch (Exception e) {
+            fail("Failed to inject dependencies: " + e.getMessage());
         }
+    }
 
-        assertTrue(authorityList.contains("READ_CLIENT"));
-        assertTrue(authorityList.contains("WRITE_CLIENT"));
-        assertTrue(authorityList.contains("DELETE_CLIENT"));
-
-        assertTrue(result.getRight().contains("READ_CLIENT"));
-        assertTrue(result.getRight().contains("WRITE_CLIENT"));
-        assertTrue(result.getRight().contains("DELETE_CLIENT"));
+    @AfterEach
+    void tearDown() throws Exception {
+        if (mocks != null) mocks.close();
+        SecurityContextHolder.clearContext();
     }
 
     @Test
-    @DisplayName("Should return empty authorities and permissions when user has no roles")
-    void resolveAuthoritiesWithNoRoles() {
-        AppUser user = new AppUser();
-        user.setRoles(Collections.emptyList());
-
-        Pair<Collection<GrantedAuthority>, Set<String>> result = service.resolveAuthoritiesFromUserDetails(user);
-
-        assertNotNull(result);
-        assertTrue(result.getLeft().isEmpty());
-        assertTrue(result.getRight().isEmpty());
+    @DisplayName("createUserFromKeycloakUserData returns null when authentication missing")
+    void createUserFromKeycloakUserData_nullAuth_returnsNull() {
+        SecurityContextHolder.clearContext();
+        AppUser result = service.createUserFromKeycloakUserData(null);
+        assertNull(result);
+        verify(appUserRepository, never()).saveAndFlush(any());
     }
 
     @Test
-    @DisplayName("Should handle roles with empty permission sets")
-    void resolveAuthoritiesWithEmptyPermissions() {
-        Role emptyPermRole = new Role();
-        emptyPermRole.setPermissions(Collections.<Permission>emptySet());
+    @DisplayName("createUserFromKeycloakUserData returns null when principal not Jwt")
+    void createUserFromKeycloakUserData_nonJwtPrincipal_returnsNull() {
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken("stringPrincipal", null));
+        AppUser result = service.createUserFromKeycloakUserData(SecurityContextHolder.getContext().getAuthentication());
+        assertNull(result);
+        verify(appUserRepository, never()).saveAndFlush(any());
+    }
 
-        AppUser user = new AppUser();
-        List<Role> roles = new ArrayList<>();
-        roles.add(emptyPermRole);
-        user.setRoles(roles);
+    @Test
+    @DisplayName("createUserFromKeycloakUserData returns null when claims are null")
+    void createUserFromKeycloakUserData_nullClaims_returnsNull() {
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getClaims()).thenReturn(null);
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(jwt, null));
+        AppUser result = service.createUserFromKeycloakUserData(SecurityContextHolder.getContext().getAuthentication());
+        assertNull(result);
+        verify(appUserRepository, never()).saveAndFlush(any());
+    }
 
-        Pair<Collection<GrantedAuthority>, Set<String>> result = service.resolveAuthoritiesFromUserDetails(user);
+    @Test
+    @DisplayName("createUserFromKeycloakUserData saves user built from JWT claims and encodes password")
+    void createUserFromKeycloakUserData_happyPath_savesUser() {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("preferred_username", "john.doe@oneacrefund.org");
+        claims.put("email", "john.doe@oneacrefund.org");
+        claims.put("given_name", "John");
+        claims.put("family_name", "Doe");
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getClaims()).thenReturn(claims);
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(jwt, null));
 
-        assertNotNull(result);
-        assertTrue(result.getLeft().isEmpty());
-        assertTrue(result.getRight().isEmpty());
+        when(passwordEncoder.encode(any(String.class))).thenAnswer(inv -> "ENC(" + inv.getArgument(0, String.class) + ")");
+        when(appUserRepository.saveAndFlush(any(AppUser.class))).thenAnswer(inv -> inv.getArgument(0, AppUser.class));
+
+        AppUser created = service.createUserFromKeycloakUserData(SecurityContextHolder.getContext().getAuthentication());
+        assertNotNull(created);
+        assertEquals("john.doe@oneacrefund.org", created.getUsername());
+        assertEquals("john.doe@oneacrefund.org", created.getEmail());
+        assertEquals("John", created.getFirstname());
+        assertEquals("Doe", created.getLastname());
+        assertTrue(created.isEnabled());
+        assertTrue(created.isAccountNonExpired());
+        assertTrue(created.isAccountNonLocked());
+        assertTrue(created.isCredentialsNonExpired());
+        assertFalse(created.isDeleted());
+        assertNotNull(created.getLastTimePasswordUpdated());
+
+        ArgumentCaptor<AppUser> captor = ArgumentCaptor.forClass(AppUser.class);
+        verify(appUserRepository).saveAndFlush(captor.capture());
+        assertNotNull(captor.getValue().getPassword());
+        assertTrue(captor.getValue().getPassword().startsWith("ENC("));
+    }
+
+    @Test
+    @DisplayName("getAppUser builds AppUser with encoded password and fields set")
+    void getAppUser_buildsUser_correctFields() throws Exception {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("email", "alice@oneacrefund.org");
+        claims.put("given_name", "Alice");
+        claims.put("family_name", "Smith");
+        when(passwordEncoder.encode(any(String.class))).thenAnswer(inv -> "ENC(" + inv.getArgument(0, String.class) + ")");
+
+        Method m = KeycloakUserCreationService.class.getDeclaredMethod("getAppUser", Map.class, String.class, String.class);
+        m.setAccessible(true);
+        AppUser user = (AppUser) m.invoke(service, claims, "alice@oneacrefund.org", "rawPass");
+
+        assertEquals("alice@oneacrefund.org", user.getUsername());
+        assertTrue(user.getPassword().startsWith("ENC("));
+        assertEquals("alice@oneacrefund.org", user.getEmail());
+        assertEquals("Alice", user.getFirstname());
+        assertEquals("Smith", user.getLastname());
+        assertFalse(user.isDeleted());
+        assertTrue(user.isEnabled());
+        assertTrue(user.isAccountNonExpired());
+        assertTrue(user.isAccountNonLocked());
+        assertTrue(user.isCredentialsNonExpired());
+        assertNotNull(user.getLastTimePasswordUpdated());
+        assertNotNull(user.getCreatedDate());
+        assertNotNull(user.getLastModifiedDate());
+        assertTrue(user.getCreatedDate().isBefore(LocalDateTime.now().plusSeconds(2)));
+        assertTrue(user.getLastModifiedDate().isBefore(LocalDateTime.now().plusSeconds(2)));
+        assertTrue(user.getLastTimePasswordUpdated().before(new Date(System.currentTimeMillis() + 2000)));
     }
 }
 

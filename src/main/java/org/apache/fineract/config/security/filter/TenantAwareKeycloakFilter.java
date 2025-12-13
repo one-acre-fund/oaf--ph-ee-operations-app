@@ -38,7 +38,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -49,6 +48,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Enumeration;
 
+import static org.apache.fineract.config.security.utils.SecurityUtils.extractUsername;
 
 @Service
 @Profile("keycloak")
@@ -104,7 +104,6 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
             task.stop();
             final PlatformRequestLog log = PlatformRequestLog.from(task, request);
             LOG.debug("{}", log);
-            ThreadLocalContextUtil.clear();
         }
     }
 
@@ -167,6 +166,7 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);
             if (userDetails != null) {
+                ThreadLocalContextUtil.setCurrentUser((AppUser) userDetails);
                 Authentication authentication = new UsernamePasswordAuthenticationToken(
                         userDetails,
                         userDetails.getPassword(),
@@ -177,22 +177,17 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
             }
 
         } catch (UsernameNotFoundException ex) {
-            LOG.error("Keycloak user not found in database: {}", ex.getMessage());
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User authenticated by Keycloak but not found");
-            return false;
+            LOG.info("Keycloak user not found in database: {}. Proceeding to create as first time login user", ex.getMessage());
+            AppUser appUser = keycloakUserCreationService
+                    .createUserFromKeycloakUserData(keycloakAuth);
+            ThreadLocalContextUtil.setCurrentUser(appUser);
+            Authentication authentication = new UsernamePasswordAuthenticationToken(appUser, appUser.getPassword(),
+                    keycloakUserCreationService.resolveAuthoritiesFromUserDetails(appUser).getLeft());
+            SecurityContextHolder.clearContext();
+            SecurityContextHolder.getContext().setAuthentication(authentication);
         }
 
         return true;
-    }
-
-    private String extractUsername(Authentication auth) {
-        Object principal = auth.getPrincipal();
-        if (principal instanceof AppUser) {
-            return ((AppUser) principal).getUsername();
-        } else if (principal instanceof Jwt) {
-            return (String) ((Jwt) principal).getClaims().get("email");
-        }
-        return "";
     }
 
     private void handleInvalidTenantException(HttpServletResponse response, InvalidTenantIdentifierException e)

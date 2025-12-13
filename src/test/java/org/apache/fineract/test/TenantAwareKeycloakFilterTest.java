@@ -4,11 +4,14 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.fineract.config.security.filter.TenantAwareKeycloakFilter;
 import org.apache.fineract.config.security.service.KeycloakUserCreationService;
 import org.apache.fineract.config.security.utils.TenantIdUtil;
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.organisation.tenant.TenantServerConnection;
 import org.apache.fineract.organisation.tenant.TenantServerConnectionRepository;
 import org.apache.fineract.organisation.user.AppUser;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockitoAnnotations;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
@@ -47,14 +50,31 @@ class TenantAwareKeycloakFilterTest {
 
     private TenantAwareKeycloakFilter filter;
 
+    private AutoCloseable mocks;
+
     @BeforeEach
-    void setUp() {
+    void setUpMocks() {
+        mocks = MockitoAnnotations.openMocks(this);
         userDetailsService = mock(UserDetailsService.class);
         keycloakUserCreationService = mock(KeycloakUserCreationService.class);
         tenantIdUtil = mock(TenantIdUtil.class);
         tenantRepo = mock(TenantServerConnectionRepository.class);
 
         filter = new TenantAwareKeycloakFilter(userDetailsService, keycloakUserCreationService, tenantIdUtil, tenantRepo);
+
+        // Ensure a clean security context at start
+        SecurityContextHolder.clearContext();
+        ThreadLocalContextUtil.setCurrentUser(null);
+    }
+
+    @AfterEach
+    void tearDownMocks() throws Exception {
+        if (mocks != null) {
+            mocks.close();
+        }
+        // Clear thread-local and security context to avoid leakage
+        ThreadLocalContextUtil.setCurrentUser(null);
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -107,6 +127,7 @@ class TenantAwareKeycloakFilterTest {
         Jwt mockJwt = mock(Jwt.class);
         Map<String, Object> claims = new HashMap<>();
         claims.put("email", "malicious@example.com");
+        claims.put("preferred_username", "malicious@example.com");
         when(mockJwt.getClaims()).thenReturn(claims);
 
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(mockJwt, null));
@@ -130,15 +151,30 @@ class TenantAwareKeycloakFilterTest {
         Jwt mockJwt = mock(Jwt.class);
         Map<String, Object> claims = new HashMap<>();
         claims.put("email", "dev@oneacrefund.org");
+        claims.put("preferred_username", "dev@oneacrefund.org");
         when(mockJwt.getClaims()).thenReturn(claims);
 
-        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(mockJwt, null));
+        // Set authentication with JWT principal
+        UsernamePasswordAuthenticationToken keycloakAuth = new UsernamePasswordAuthenticationToken(mockJwt, null);
+        SecurityContextHolder.getContext().setAuthentication(keycloakAuth);
+
         when(userDetailsService.loadUserByUsername("dev@oneacrefund.org"))
                 .thenThrow(new UsernameNotFoundException("not found"));
 
+        // Stub first-time creation path used by filter
+        AppUser created = mock(AppUser.class);
+        when(created.getUsername()).thenReturn("dev@oneacrefund.org");
+        when(keycloakUserCreationService.createUserFromKeycloakUserData(keycloakAuth)).thenReturn(created);
+        Collection<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+        Set<String> perms = new HashSet<>();
+        perms.add("ROLE_USER");
+        when(keycloakUserCreationService.resolveAuthoritiesFromUserDetails(any()))
+                .thenReturn(Pair.of(authorities, perms));
+
         filter.doFilter(req, res, chain);
 
-        assertEquals(401, res.getStatus());
+        // Expect success after first time user creation
+        assertEquals(200, res.getStatus());
     }
 
     @Test
@@ -153,26 +189,27 @@ class TenantAwareKeycloakFilterTest {
         when(tenantRepo.findOneBySchemaName("oaf")).thenReturn(new TenantServerConnection());
 
         Jwt jwt = mock(Jwt.class);
-
         Map<String, Object> claims = new HashMap<>();
         claims.put("email", "admin@oneacrefund.org");
+        claims.put("preferred_username", "admin@oneacrefund.org");
         when(jwt.getClaims()).thenReturn(claims);
-
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(jwt, null));
 
-        UserDetails userDetails = new User("admin@oneacrefund.org", "pass",
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN")));
-        when(userDetailsService.loadUserByUsername("admin@oneacrefund.org")).thenReturn(userDetails);
+        // Return AppUser instead of Spring Security User to match filter cast
+        AppUser appUserDetails = mock(AppUser.class);
+        when(appUserDetails.getUsername()).thenReturn("admin@oneacrefund.org");
+        when(userDetailsService.loadUserByUsername("admin@oneacrefund.org")).thenReturn(appUserDetails);
+
         Collection<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"));
         Set<String> perms = new HashSet<>();
         perms.add("ROLE_ADMIN");
-
         when(keycloakUserCreationService.resolveAuthoritiesFromUserDetails(any()))
                 .thenReturn(Pair.of(authorities, perms));
+
         filter.doFilter(req, res, chain);
 
         assertEquals(200, res.getStatus());
-        assertTrue(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof UserDetails);
+        assertTrue(SecurityContextHolder.getContext().getAuthentication().getPrincipal() instanceof AppUser);
     }
 
     @Test
@@ -187,16 +224,16 @@ class TenantAwareKeycloakFilterTest {
 
         AppUser appUser = mock(AppUser.class);
         when(appUser.getUsername()).thenReturn("user@oneacrefund.org");
-
         SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(appUser, null));
 
-        UserDetails userDetails = new User("user@oneacrefund.org", "pass",
-                Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER")));
-        when(userDetailsService.loadUserByUsername("user@oneacrefund.org")).thenReturn(userDetails);
-        Collection<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_ADMIN"));
-        Set<String> perms = new HashSet<>();
-        perms.add("ROLE_ADMIN");
+        // Return AppUser from userDetailsService, not Spring User
+        AppUser loaded = mock(AppUser.class);
+        when(loaded.getUsername()).thenReturn("user@oneacrefund.org");
+        when(userDetailsService.loadUserByUsername("user@oneacrefund.org")).thenReturn(loaded);
 
+        Collection<GrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
+        Set<String> perms = new HashSet<>();
+        perms.add("ROLE_USER");
         when(keycloakUserCreationService.resolveAuthoritiesFromUserDetails(any()))
                 .thenReturn(Pair.of(authorities, perms));
 

@@ -5,11 +5,11 @@ import org.apache.fineract.audit.data.AuditSourceRepository;
 import org.apache.fineract.audit.events.NewAuditEvent;
 import org.apache.fineract.audit.service.AuditServiceImpl;
 import org.apache.fineract.organisation.user.AppUser;
+import org.apache.fineract.organisation.user.AppUserRepository;
 import org.apache.fineract.utils.DateUtil;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -23,11 +23,13 @@ class AuditServiceTest {
     private AuditSourceRepository auditSourceRepository;
     private AuditServiceImpl auditService;
     private DateUtil dateUtil;
+    private AppUserRepository appUserRepository;
 
     @BeforeEach
     void setUp() {
         auditSourceRepository = mock(AuditSourceRepository.class);
-        auditService = new AuditServiceImpl(auditSourceRepository, null, null);
+        appUserRepository = mock(AppUserRepository.class);
+        auditService = new AuditServiceImpl(auditSourceRepository, appUserRepository, null);
         dateUtil = new DateUtil();
     }
 
@@ -61,5 +63,27 @@ class AuditServiceTest {
         // Then
         Assertions.assertEquals(result, auditPage);
         verify(auditSourceRepository).findAll(specification, pageable);
+    }
+
+    @Test
+    void testCreateNewEntry_usesDefaultMakerWhenNull() {
+        // Given
+        LocalDateTime madeOn = dateUtil.getLocalDateTimeOfTenant(null);
+        NewAuditEvent event = new NewAuditEvent(this, 2L, "UPDATE", "AppUser", "", "data", null, "SUCCESS", madeOn);
+        org.apache.fineract.organisation.user.AppUser fallbackMaker = mock(org.apache.fineract.organisation.user.AppUser.class);
+        when(appUserRepository.findById(1L)).thenReturn(java.util.Optional.of(fallbackMaker));
+
+        AuditSource savedAudit = new AuditSource();
+        when(auditSourceRepository.save(any(AuditSource.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        // When
+        AuditSource result = auditService.createNewEntry(event);
+
+        // Then
+        Assertions.assertEquals("AppUser", result.getEntityName());
+        Assertions.assertEquals("UPDATE", result.getActionName());
+        Assertions.assertEquals(fallbackMaker, result.getMaker());
+        verify(appUserRepository).findById(1L);
+        verify(auditSourceRepository).save(any(AuditSource.class));
     }
 }

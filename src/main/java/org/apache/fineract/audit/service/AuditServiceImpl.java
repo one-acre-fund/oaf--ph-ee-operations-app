@@ -34,7 +34,7 @@ public class AuditServiceImpl implements AuditService {
         audit.setDataAsJson(event.getDataAsJson());
         audit.setProcessingResult(event.getProcessingResult());
         audit.setMadeOnDate(event.getMadeOnDate());
-        audit.setMaker(event.getMaker());
+        audit.setMaker(event.getMaker() != null ? event.getMaker() : appUserRepository.findById(1L).get());
         return auditSourceRepository.save(audit);
     }
 
