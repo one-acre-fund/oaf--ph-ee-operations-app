@@ -28,6 +28,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -83,6 +87,7 @@ public class TenantDatabaseUpgradeService {
     @PostConstruct
     public void setupEnvironment() {
         flywayDefaultSchema();
+        createTenantsIfNotExists();
         insertTenants();
         flywayTenants();
     }
@@ -139,5 +144,41 @@ public class TenantDatabaseUpgradeService {
         fw.setInitOnMigrate(true);
         fw.setOutOfOrder(true);
         fw.migrate();
+    }
+
+    /**
+     * Create tenant databases if they do not already exist.
+     */
+    public void createTenantsIfNotExists() {
+        String jdbcUrl = jdbcProtocol + ":" + jdbcSubprotocol + "://" + hostname + ":" + port + "/" + jdbcSubprotocol;
+        if (tenants == null || tenants.isEmpty()) { return; }
+        for (String raw : tenants) {
+           if (raw == null) { continue; }
+           String tenant = raw.trim();
+           if (tenant.isEmpty() || !tenant.matches("^[A-Za-z0-9_]+$")) {
+               logger.warn("Skipping invalid tenant identifier: '{}'", raw);
+               continue;
+           }
+           try (Connection conn = createConnection(jdbcUrl, username, password); Statement stmt = conn.createStatement()) {
+               String sql = "CREATE DATABASE IF NOT EXISTS `" + tenant + "`";
+               stmt.executeUpdate(sql);
+               logger.info("Database checked/created for tenant: {}", tenant);
+           } catch (SQLException e) {
+               logger.error("Error creating or migrating tenant database: {}", tenant, e);
+           }
+       }
+    }
+
+    /**
+     * Create a database connection.
+     *
+     * @param url      the database URL
+     * @param username the database username
+     * @param password the database password
+     * @return the database connection
+     * @throws SQLException if a database access error occurs
+     */
+    public Connection createConnection(String url, String username, String password) throws SQLException {
+        return DriverManager.getConnection(url, username, password);
     }
 }
