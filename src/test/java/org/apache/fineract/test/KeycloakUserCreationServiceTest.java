@@ -40,18 +40,7 @@ class KeycloakUserCreationServiceTest {
         mocks = MockitoAnnotations.openMocks(this);
         appUserRepository = mock(AppUserRepository.class);
         passwordEncoder = mock(PasswordEncoder.class);
-        service = new KeycloakUserCreationService();
-        // inject mocks via reflection since fields are @Autowired
-        try {
-            var appRepoField = KeycloakUserCreationService.class.getDeclaredField("appuserRepository");
-            appRepoField.setAccessible(true);
-            appRepoField.set(service, appUserRepository);
-            var encoderField = KeycloakUserCreationService.class.getDeclaredField("passwordEncoder");
-            encoderField.setAccessible(true);
-            encoderField.set(service, passwordEncoder);
-        } catch (Exception e) {
-            fail("Failed to inject dependencies: " + e.getMessage());
-        }
+        service = new KeycloakUserCreationService(appUserRepository, passwordEncoder);
     }
 
     @AfterEach
@@ -137,7 +126,6 @@ class KeycloakUserCreationServiceTest {
         AppUser user = (AppUser) m.invoke(service, claims, "alice@oneacrefund.org", "rawPass");
 
         assertEquals("alice@oneacrefund.org", user.getUsername());
-        assertTrue(user.getPassword().startsWith("ENC("));
         assertEquals("alice@oneacrefund.org", user.getEmail());
         assertEquals("Alice", user.getFirstname());
         assertEquals("Smith", user.getLastname());

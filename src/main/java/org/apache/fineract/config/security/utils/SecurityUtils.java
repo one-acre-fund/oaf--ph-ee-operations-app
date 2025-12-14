@@ -13,7 +13,8 @@ public class SecurityUtils {
         if (principal instanceof AppUser) {
             return ((AppUser) principal).getUsername();
         } else if (principal instanceof Jwt) {
-            return (String) ((Jwt) principal).getClaims().get("preferred_username");
+            Object claim = ((Jwt) principal).getClaims().get("preferred_username");
+            return claim != null ? (String) claim : "";
         }
         return "";
     }

@@ -180,6 +180,11 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
             LOG.info("Keycloak user not found in database: {}. Proceeding to create as first time login user", ex.getMessage());
             AppUser appUser = keycloakUserCreationService
                     .createUserFromKeycloakUserData(keycloakAuth);
+            if (appUser == null) {
+                LOG.error("Failed to create user from Keycloak data");
+                response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to provision user");
+                return false;
+            }
             ThreadLocalContextUtil.setCurrentUser(appUser);
             Authentication authentication = new UsernamePasswordAuthenticationToken(appUser, appUser.getPassword(),
                     keycloakUserCreationService.resolveAuthoritiesFromUserDetails(appUser).getLeft());

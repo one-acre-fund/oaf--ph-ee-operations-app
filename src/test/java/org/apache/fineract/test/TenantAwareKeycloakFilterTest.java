@@ -16,6 +16,7 @@ import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -25,6 +26,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.oauth2.jwt.Jwt;
 
+import javax.servlet.http.HttpServletResponse;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -33,6 +35,7 @@ import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.atLeastOnce;
@@ -240,5 +243,30 @@ class TenantAwareKeycloakFilterTest {
         filter.doFilter(req, res, chain);
 
         assertEquals(200, res.getStatus());
+    }
+
+    @Test
+    void shouldReturn500WhenUserProvisioningFails() throws Exception {
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/api/resource/report");
+        req.addHeader("Platform-TenantId", "oaf");
+        MockHttpServletResponse res = new MockHttpServletResponse();
+        MockFilterChain chain = new MockFilterChain();
+
+        when(tenantIdUtil.useDefaultTenantIdIfBlank("oaf", "/api/resource/report")).thenReturn("oaf");
+        when(tenantRepo.findOneBySchemaName("oaf")).thenReturn(new TenantServerConnection());
+
+        AppUser principal = mock(AppUser.class);
+        when(principal.getUsername()).thenReturn("missing@oneacrefund.org");
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(principal, null));
+
+        when(userDetailsService.loadUserByUsername("missing@oneacrefund.org"))
+                .thenThrow(new UsernameNotFoundException("not found"));
+
+        when(keycloakUserCreationService.createUserFromKeycloakUserData(any(Authentication.class)))
+                .thenReturn(null);
+
+        filter.doFilter(req, res, chain);
+
+        assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, res.getStatus());
     }
 }

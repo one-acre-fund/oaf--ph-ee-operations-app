@@ -49,12 +49,13 @@ import java.util.Set;
 @Service
 public class KeycloakUserCreationService {
     public static final Integer KEYCLOAK_RANDOM_PWD_CHARACTERS = 16;
+    private final AppUserRepository appuserRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    @Autowired
-    private AppUserRepository appuserRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    public KeycloakUserCreationService(AppUserRepository appuserRepository, PasswordEncoder passwordEncoder) {
+        this.appuserRepository = appuserRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     public Pair<Collection<GrantedAuthority>, Set<String>> resolveAuthoritiesFromUserDetails(UserDetails userDetails) {
         final Collection<GrantedAuthority> authorities = new ArrayList<>();
@@ -69,32 +70,32 @@ public class KeycloakUserCreationService {
     }
 
     public AppUser createUserFromKeycloakUserData(Authentication token) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null) {
+        if (token == null) {
             return null;
         }
-        Object principalObj = authentication.getPrincipal();
+        Object principalObj = token.getPrincipal();
         if (!(principalObj instanceof Jwt)) {
             return null;
         }
         Jwt principal = (Jwt) principalObj;
         String username = null;
-            if (principal.getClaims() != null) {
-                username = principal.getClaims().get("preferred_username").toString();
-                String password = new RandomPasswordGenerator(KEYCLOAK_RANDOM_PWD_CHARACTERS).generate();
-                AppUser appUser = getAppUser(principal.getClaims(), username, passwordEncoder.encode(password));
-                return appuserRepository.saveAndFlush(appUser);
-            }
-            return null;
+        Map<String, Object> claims = principal.getClaims();
+        if (claims != null && claims.containsKey("preferred_username")) {
+            username = claims.get("preferred_username").toString();
+            String password = new RandomPasswordGenerator(KEYCLOAK_RANDOM_PWD_CHARACTERS).generate();
+            AppUser appUser = getAppUser(principal.getClaims(), username, passwordEncoder.encode(password));
+            return appuserRepository.saveAndFlush(appUser);
+        }
+        return null;
     }
 
-    private AppUser getAppUser(Map<String, Object> accessToken, String username, String password) {
+    private static AppUser getAppUser(Map<String, Object> accessToken, String username, String password) {
         AppUser appUser = new AppUser();
         appUser.setUsername(username);
-        appUser.setPassword(passwordEncoder.encode(password));
-        appUser.setEmail(accessToken.get("email").toString());
-        appUser.setFirstname(accessToken.get("given_name").toString());
-        appUser.setLastname(accessToken.get("family_name").toString());
+        appUser.setPassword(password);
+        appUser.setEmail(getClaimAsString(accessToken, "email"));
+        appUser.setFirstname(getClaimAsString(accessToken, "given_name"));
+        appUser.setLastname(getClaimAsString(accessToken, "family_name"));
         appUser.setFirstTimeLoginRemaining(false);
         appUser.setAccountNonExpired(true);
         appUser.setAccountNonLocked(true);
@@ -104,9 +105,11 @@ public class KeycloakUserCreationService {
         appUser.setLastTimePasswordUpdated(new Date());
         appUser.setCreatedDate(LocalDateTime.now());
         appUser.setLastModifiedDate(LocalDateTime.now());
-        appUser.setLastTimePasswordUpdated(new Date());
-        appUser.setLastTimePasswordUpdated(new Date());
-        appUser.setLastTimePasswordUpdated(new Date());
         return appUser;
+    }
+
+    private static String getClaimAsString(Map<String, Object> claims, String key) {
+        Object value = claims.get(key);
+        return value != null ? value.toString() : null;
     }
 }

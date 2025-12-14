@@ -30,7 +30,6 @@ public class RandomPasswordGenerator {
     }
 
     public String generate() {
-        SecureRandom random = new SecureRandom();
         final StringBuilder passwordBuilder = new StringBuilder(this.numberOfCharactersInPassword);
         for (int i = 0; i < this.numberOfCharactersInPassword; i++) {
             passwordBuilder.append((char) ((int) (secureRandom.nextDouble() * 26) + 97));
