@@ -30,9 +30,12 @@ public class RandomPasswordGenerator {
     }
 
     public String generate() {
+        final String CHAR_POOL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
         final StringBuilder passwordBuilder = new StringBuilder(this.numberOfCharactersInPassword);
         for (int i = 0; i < this.numberOfCharactersInPassword; i++) {
             passwordBuilder.append((char) ((int) (secureRandom.nextDouble() * 26) + 97));
+            int randomIndex = secureRandom.nextInt(CHAR_POOL.length());
+            passwordBuilder.append(CHAR_POOL.charAt(randomIndex));
         }
         return passwordBuilder.toString();
     }

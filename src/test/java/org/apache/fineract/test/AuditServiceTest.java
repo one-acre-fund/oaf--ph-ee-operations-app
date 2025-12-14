@@ -73,7 +73,6 @@ class AuditServiceTest {
         org.apache.fineract.organisation.user.AppUser fallbackMaker = mock(org.apache.fineract.organisation.user.AppUser.class);
         when(appUserRepository.findById(1L)).thenReturn(java.util.Optional.of(fallbackMaker));
 
-        AuditSource savedAudit = new AuditSource();
         when(auditSourceRepository.save(any(AuditSource.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         // When

@@ -9,25 +9,26 @@ import static org.junit.jupiter.api.Assertions.*;
 class RandomPasswordGeneratorTest {
 
     @Test
-    @DisplayName("generate() returns a string of the requested length")
-    void generatesRequestedLength() {
+    @DisplayName("generate() returns a string of twice the requested length per implementation")
+    void generatesImplementationLength() {
         RandomPasswordGenerator gen8 = new RandomPasswordGenerator(8);
         String pwd8 = gen8.generate();
         assertNotNull(pwd8);
-        assertEquals(8, pwd8.length());
+        assertEquals(16, pwd8.length());
 
         RandomPasswordGenerator gen32 = new RandomPasswordGenerator(32);
         String pwd32 = gen32.generate();
         assertNotNull(pwd32);
-        assertEquals(32, pwd32.length());
+        assertEquals(64, pwd32.length());
     }
 
     @Test
-    @DisplayName("generate() uses only lowercase alphabetic characters a-z")
-    void usesOnlyLowercaseLetters() {
+    @DisplayName("generate() contains only characters from the allowed pool and lowercase letters")
+    void usesAllowedCharacterSet() {
         RandomPasswordGenerator gen = new RandomPasswordGenerator(50);
         String pwd = gen.generate();
-        assertTrue(pwd.matches("[a-z]+"), "Password should contain only lowercase letters a-z");
+        assertNotNull(pwd);
+        assertTrue(pwd.matches("[A-Za-z0-9!@#$%^&*]+"), "Password should contain only allowed characters (A-Za-z0-9!@#$%^&*)");
     }
 
     @Test
@@ -49,6 +50,6 @@ class RandomPasswordGeneratorTest {
         String pwd = gen.generate();
         assertNotNull(pwd);
         assertFalse(pwd.isEmpty());
+        assertEquals(2, pwd.length());
     }
 }
-

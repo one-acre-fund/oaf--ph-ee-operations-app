@@ -141,5 +141,37 @@ class KeycloakUserCreationServiceTest {
         assertTrue(user.getLastModifiedDate().isBefore(LocalDateTime.now().plusSeconds(2)));
         assertTrue(user.getLastTimePasswordUpdated().before(new Date(System.currentTimeMillis() + 2000)));
     }
-}
 
+    @Test
+    @DisplayName("createUserFromKeycloakUserData returns null when claims exist but preferred_username missing")
+    void createUserFromKeycloakUserData_claimsWithoutPreferredUsername_returnsNull() {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("email", "no.username@oneacrefund.org");
+        Jwt jwt = mock(Jwt.class);
+        when(jwt.getClaims()).thenReturn(claims);
+        SecurityContextHolder.getContext().setAuthentication(new UsernamePasswordAuthenticationToken(jwt, null));
+
+        AppUser result = service.createUserFromKeycloakUserData(SecurityContextHolder.getContext().getAuthentication());
+        assertNull(result);
+        verify(appUserRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("getClaimAsString returns null for null value and uses toString for non-string values")
+    void getClaimAsString_handlesNullAndNonString() throws Exception {
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("numeric", 12345);
+        claims.put("nullKey", null);
+
+        Method getClaim = KeycloakUserCreationService.class.getDeclaredMethod("getClaimAsString", Map.class, String.class);
+        getClaim.setAccessible(true);
+
+        String numeric = (String) getClaim.invoke(null, claims, "numeric");
+        String nullVal = (String) getClaim.invoke(null, claims, "nullKey");
+        String missing = (String) getClaim.invoke(null, claims, "missing");
+
+        assertEquals("12345", numeric);
+        assertNull(nullVal);
+        assertNull(missing);
+    }
+}

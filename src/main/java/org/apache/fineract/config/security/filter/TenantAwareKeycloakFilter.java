@@ -18,6 +18,7 @@
  */
 package org.apache.fineract.config.security.filter;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.StopWatch;
 
@@ -28,8 +29,6 @@ import org.apache.fineract.core.service.PlatformRequestLog;
 import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.organisation.tenant.TenantServerConnectionRepository;
 import org.apache.fineract.organisation.user.AppUser;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -52,9 +51,9 @@ import static org.apache.fineract.config.security.utils.SecurityUtils.extractUse
 
 @Service
 @Profile("keycloak")
+@Slf4j
 public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TenantAwareKeycloakFilter.class);
     private static final String TENANT_REQUEST_HEADER = "Platform-TenantId";
     private static final boolean EXCEPTION_IF_HEADER_MISSING = true;
     private final UserDetailsService userDetailsService;
@@ -102,8 +101,8 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
             handleInvalidTenantException(response, e);
         } finally {
             task.stop();
-            final PlatformRequestLog log = PlatformRequestLog.from(task, request);
-            LOG.debug("{}", log);
+            ThreadLocalContextUtil.clear();
+            logger.info(PlatformRequestLog.from(task, request).toString());
         }
     }
 
@@ -139,12 +138,12 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
 
     private void logRequestHeaders(HttpServletRequest request) {
         Enumeration<String> headerNames = request.getHeaderNames();
-        LOG.debug("Logging all the request headers for troubleshooting:");
+        log.debug("Logging all the request headers for troubleshooting:");
         if (headerNames != null) {
             while (headerNames.hasMoreElements()) {
                 String headerName = headerNames.nextElement();
                 if (!"Authorization".equalsIgnoreCase(headerName) && !"Cookie".equalsIgnoreCase(headerName)) {
-                    LOG.debug("{}: {}", headerName, request.getHeader(headerName));
+                    log.debug("{}: {}", headerName, request.getHeader(headerName));
                 }
             }
         }
@@ -159,7 +158,7 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
         try {
             String username = extractUsername(keycloakAuth);
             if (!username.endsWith("@oneacrefund.org")) {
-                LOG.error("User not recognized: {}", username);
+                log.error("User not recognized: {}", username);
                 response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "User not authorized to access this resource");
                 return false;
             }
@@ -177,11 +176,11 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
             }
 
         } catch (UsernameNotFoundException ex) {
-            LOG.info("Keycloak user not found in database: {}. Proceeding to create as first time login user", ex.getMessage());
+            log.info("Keycloak user not found in database: {}. Proceeding to create as first time login user", ex.getMessage());
             AppUser appUser = keycloakUserCreationService
                     .createUserFromKeycloakUserData(keycloakAuth);
             if (appUser == null) {
-                LOG.error("Failed to create user from Keycloak data");
+                log.error("Failed to create user from Keycloak data");
                 response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Failed to provision user");
                 return false;
             }
@@ -199,7 +198,7 @@ public class TenantAwareKeycloakFilter extends OncePerRequestFilter {
             throws IOException {
         SecurityContextHolder.getContext().setAuthentication(null);
         ThreadLocalContextUtil.clear();
-        LOG.error("Invalid tenant identifier exception occurred: {}", e.getMessage());
+        log.error("Invalid tenant identifier exception occurred: {}", e.getMessage());
         response.sendError(HttpServletResponse.SC_BAD_REQUEST, "Invalid tenant identifier.");
     }
 

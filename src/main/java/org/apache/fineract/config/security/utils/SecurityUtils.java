@@ -5,7 +5,6 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Component;
 
-@Component
 public class SecurityUtils {
 
     public static String extractUsername(Authentication auth) {

@@ -9,7 +9,7 @@ import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.apache.fineract.organisation.user.AppUser;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
-import javax.persistence.PostPersist;
+import javax.persistence.PrePersist;
 import javax.persistence.PreRemove;
 import javax.persistence.PreUpdate;
 import java.time.LocalDateTime;
@@ -23,8 +23,8 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class CustomAuditingEntityListener extends AuditingEntityListener {
 
-    @PostPersist
-    public void afterPersist(Object entity) {
+    @PrePersist
+    public void onPrePersist(Object entity) {
         logAction("CREATE", entity);
     }
 
