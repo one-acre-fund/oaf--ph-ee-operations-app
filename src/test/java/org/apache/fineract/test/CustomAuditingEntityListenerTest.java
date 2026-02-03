@@ -5,6 +5,7 @@ import org.apache.fineract.audit.events.NewAuditEvent;
 import org.apache.fineract.audit.service.AuditService;
 import org.apache.fineract.config.BeanUtil;
 import org.apache.fineract.config.CustomAuditingEntityListener;
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
 import org.junit.jupiter.api.AfterEach;
@@ -48,20 +49,15 @@ class CustomAuditingEntityListenerTest {
     @AfterEach
     void tearDown() throws Exception {
         if (mocks != null) mocks.close();
+        // Ensure thread-local user does not leak between tests
+        ThreadLocalContextUtil.setCurrentUser(null);
     }
 
     @Test
     void testGetCurrentUser_authenticatedKeycloakPrincipal_returnsAppUser() {
         CustomAuditingEntityListener listener = new CustomAuditingEntityListener();
         AppUser expectedUser = mock(AppUser.class);
-        KeycloakSecurityContext keycloakSecurityContext = mock(KeycloakSecurityContext.class);
-        org.keycloak.representations.AccessToken token = mock(org.keycloak.representations.AccessToken.class);
-        when(token.getPreferredUsername()).thenReturn("testuser");
-        when(keycloakSecurityContext.getToken()).thenReturn(token);
-        KeycloakPrincipal<KeycloakSecurityContext> principal = mock(KeycloakPrincipal.class);
-        when(principal.getKeycloakSecurityContext()).thenReturn(keycloakSecurityContext);
-        when(authentication.getPrincipal()).thenReturn(principal);
-        when(appUserRepository.findAppUserByName("testuser")).thenReturn(expectedUser);
+        ThreadLocalContextUtil.setCurrentUser(expectedUser);
         try (MockedStatic<SecurityContextHolder> schMock = mockStatic(SecurityContextHolder.class);
              MockedStatic<BeanUtil> beanUtilMock = mockStatic(BeanUtil.class)) {
             schMock.when(SecurityContextHolder::getContext).thenReturn(securityContext);
@@ -184,4 +180,3 @@ class CustomAuditingEntityListenerTest {
 
 
 }
-

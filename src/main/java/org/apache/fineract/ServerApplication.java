@@ -19,7 +19,6 @@
 package org.apache.fineract;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.fineract.config.security.filter.TenantAwareKeycloakFilter;
 import org.apache.fineract.core.service.TenantAwareHeaderFilter;
 import org.apache.fineract.organisation.tenant.TenantServerConnectionRepository;
 import org.mifos.connector.common.interceptor.annotation.EnableJsonWebSignature;
@@ -35,23 +34,14 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Primary;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.context.annotation.Profile;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.AuthenticationProvider;
-import org.springframework.security.authentication.ProviderManager;
-import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
-import java.util.ArrayList;
-import java.util.List;
 
 @SpringBootApplication
 @EnableConfigurationProperties

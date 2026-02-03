@@ -19,12 +19,14 @@
 package org.apache.fineract.core.service;
 
 import org.apache.fineract.organisation.tenant.TenantServerConnection;
+import org.apache.fineract.organisation.user.AppUser;
 import org.springframework.util.Assert;
 
 public class ThreadLocalContextUtil {
 
     private static final ThreadLocal<TenantServerConnection> tenantcontext = new ThreadLocal<>();
     private static final ThreadLocal<String> authTokenContext = new ThreadLocal<>();
+    private static final ThreadLocal<AppUser> currentUserContext = new ThreadLocal<>();
 
 
     public static void setTenant(final TenantServerConnection tenant) {
@@ -39,9 +41,17 @@ public class ThreadLocalContextUtil {
     public static void clear() {
         tenantcontext.remove();
         authTokenContext.remove();
+        currentUserContext.remove();
     }
 
     public static void setAuthToken(final String authToken) {
         authTokenContext.set(authToken);
+    }
+
+    public static AppUser getCurrentUser() {
+        return currentUserContext.get();
+    }
+    public static void setCurrentUser(final AppUser currentUser) {
+        currentUserContext.set(currentUser);
     }
 }
