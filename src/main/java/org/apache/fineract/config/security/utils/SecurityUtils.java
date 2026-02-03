@@ -3,9 +3,10 @@ package org.apache.fineract.config.security.utils;
 import org.apache.fineract.organisation.user.AppUser;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.stereotype.Component;
 
 public class SecurityUtils {
+
+    private SecurityUtils() {}
 
     public static String extractUsername(Authentication auth) {
         Object principal = auth.getPrincipal();

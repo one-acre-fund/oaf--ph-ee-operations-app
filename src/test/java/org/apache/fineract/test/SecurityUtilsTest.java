@@ -4,7 +4,6 @@ import org.apache.fineract.config.security.utils.SecurityUtils;
 import org.apache.fineract.organisation.user.AppUser;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
 
