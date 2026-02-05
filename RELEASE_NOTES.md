@@ -1,5 +1,10 @@
 Release Notes
 
+## Version 1.1.8 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * User Management
+            * [CP-3958] - Automatically create new Keycloak users
+
 ## Version 1.1.7 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * Authentication and Security
@@ -8,6 +13,7 @@ Release Notes
             * [CP-3757] - Switch CI build to GitHub Actions
         * Multi-tenancy
             * [CP-3931] - Database check/creation per tenant during application startup
+
 ## Version 1.1.6 - Up to date with Mifos Version 1.5.0
 
     * Payment Hub OPs
