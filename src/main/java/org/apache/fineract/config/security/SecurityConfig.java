@@ -44,7 +44,8 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
                         "/v3/api-docs/**",
                         "/swagger-resources/**",
                         "/swagger-config/**",
-                        "/api/v1/errorcode/**"
+                        "/api/v1/errorcode/**",
+                        "/actuator/**"
                 )
                 .and()
                 .authorizeRequests()
@@ -53,7 +54,8 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
                         "/v3/api-docs/**",
                         "/swagger-resources/**",
                         "/swagger-config/**",
-                        "/api/v1/errorcode/**"
+                        "/api/v1/errorcode/**",
+                        "/actuator/**"
                 ).permitAll()
                 .anyRequest().authenticated()
                 .and()
