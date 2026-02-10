@@ -73,7 +73,7 @@ public class OperationsApi {
 
     @Value("${channel-connector.transfer-path}")
     private String channelConnectorTransferPath;
-    private String transferResourceNameForPermissions = "TRANSFER";
+    private final String transferResourceNameForPermissions = "TRANSFER";
     private final String transactionRequestsResourceNameForPermissions = "TRANSACTION_REQUEST";
 
     @PostMapping("/transfer/{transactionId}/refund")

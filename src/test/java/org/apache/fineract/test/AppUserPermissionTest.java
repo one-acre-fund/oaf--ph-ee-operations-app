@@ -206,20 +206,6 @@ class AppUserPermissionTest {
         assertDoesNotThrow(() -> appUser.validateHasPermission("READ", "TRANSFER"));
     }
 
-    @DisplayName("Validate permission - user has ALL_FUNCTIONS_READ permission")
-    @Test
-    void test_validate_has_permission_with_all_functions_read() {
-        // Arrange
-        Role role = new Role();
-        Permission permission = new Permission();
-        permission.setCode("ALL_FUNCTIONS_READ");
-        role.setPermissions(new HashSet<>(Collections.singletonList(permission)));
-        appUser.setRoles(Collections.singletonList(role));
-
-        // Act & Assert
-        assertDoesNotThrow(() -> appUser.validateHasPermission("READ", "TRANSFER"));
-    }
-
     @DisplayName("Validate permission - user has specific permission")
     @Test
     void test_validate_has_permission_with_specific_permission() {

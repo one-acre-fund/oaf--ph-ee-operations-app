@@ -4,6 +4,7 @@ package org.apache.fineract.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.fineract.TestUtils;
 import org.apache.fineract.core.service.ThreadLocalContextUtil;
+import org.apache.fineract.exception.NoAuthorizationException;
 import org.apache.fineract.operations.*;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
@@ -440,6 +441,70 @@ class OperationsDetailedApiTest {
 
         assertNotNull(result);
         verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
+    }
+
+    @DisplayName("Returns page of transaction requests with custom pagination and sorting")
+    @Test
+    void test_transaction_requests_with_custom_pagination_and_sorting() {
+        Integer page = 2;
+        Integer size = 50;
+        String sortedBy = "transactionId";
+        String sortedOrder = "ASC";
+        doNothing().when(connectedUser).validateHasReadPermission("TRANSACTION_REQUEST");
+        TransactionRequest txnRequest = new TransactionRequest();
+        Page<TransactionRequest> expectedPage = new PageImpl<>(Collections.singletonList(txnRequest));
+        when(transactionRequestRepository.findAll(any(Specifications.class), any(PageRequest.class)))
+                .thenReturn(expectedPage);
+        AppUser appUser = new AppUser();
+        appUser.setPayeePartyIdsList(Collections.singletonList("*"));
+        appUser.setCurrenciesList(Collections.singletonList("*"));
+        appUser.setPayeePartyIdTypesList(Collections.singletonList("*"));
+        when(appUserRepository.findAppUserByName(any())).thenReturn(appUser);
+        testUtils.setupSecurityContext(appUser);
+        Page<TransactionRequest> result = operationsDetailedApi.transactionRequests(
+                page, size, null, null, null, null, null, null, null, null, null, null, null, null, null, sortedBy, sortedOrder, sortedOrder
+        );
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+    }
+    @DisplayName("Transaction requests validates read permission")
+    @Test
+    void test_transaction_requests_validates_read_permission() {
+        Integer page = 2;
+        Integer size = 50;
+        String sortedBy = "transactionId";
+        String sortedOrder = "ASC";
+        // Arrange
+        doNothing().when(connectedUser).validateHasReadPermission("TRANSACTION_REQUEST");
+
+        Page<TransactionRequest> emptyPage = new PageImpl<>(Collections.emptyList());
+        when(transactionRequestRepository.findAll(any(Specifications.class), any(PageRequest.class)))
+                .thenReturn(emptyPage);
+
+        AppUser appUser = new AppUser();
+        appUser.setPayeePartyIdsList(Collections.singletonList("*"));
+        appUser.setCurrenciesList(Collections.singletonList("*"));
+        appUser.setPayeePartyIdTypesList(Collections.singletonList("*"));
+        when(appUserRepository.findAppUserByName(any())).thenReturn(appUser);
+        testUtils.setupSecurityContext(appUser);
+        Page<TransactionRequest> result = operationsDetailedApi.transactionRequests(
+                page, size, null, null, null, null, null, null, null, null, null, null, null, null, null, sortedBy, sortedOrder, sortedOrder
+        );
+        verify(connectedUser).validateHasReadPermission("TRANSACTION_REQUEST");
+    }
+    @DisplayName("Transaction requests throws exception when user lacks read permission")
+    @Test
+    void test_transaction_requests_throws_exception_when_no_permission() {
+        doThrow(new NoAuthorizationException("User has no authority to READ transaction_requests"))
+                .when(connectedUser).validateHasReadPermission("TRANSACTION_REQUEST");
+
+        assertThrows(NoAuthorizationException.class, () -> {
+            operationsDetailedApi.transactionRequests(
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+            );
+        });
+
+        verify(connectedUser).validateHasReadPermission("TRANSACTION_REQUEST");
     }
 
 }

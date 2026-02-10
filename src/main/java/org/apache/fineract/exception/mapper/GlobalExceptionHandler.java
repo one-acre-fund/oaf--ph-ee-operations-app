@@ -26,11 +26,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoAuthorizationException.class)
     public ResponseEntity<ApiGlobalErrorResponse> handleNoAuthorizationException(NoAuthorizationException exception) {
-        String defaultUserMessage = exception.getMessage();
+        String defaultUserMessage = exception.getMessage() != null ? exception.getMessage() : "Authorization failed";
         log.warn("Exception: {}, Message: {}", exception.getClass().getName(), defaultUserMessage);
 
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
-                .body(ApiGlobalErrorResponse.unAuthorized(defaultUserMessage));
+                .body(ApiGlobalErrorResponse.forbidden(defaultUserMessage));
     }
 }

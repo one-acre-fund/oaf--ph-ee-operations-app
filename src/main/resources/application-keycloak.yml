@@ -1,11 +1,11 @@
 fineract:
   datasource:
     core:
-      host: localhost
+      host: operations-mysql
       port: 3306
       schema: tenants
       username: root
-      password: password
+      password: mysql
     common:
       protocol: jdbc
       subprotocol: mysql

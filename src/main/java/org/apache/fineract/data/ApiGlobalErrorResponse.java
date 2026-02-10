@@ -20,7 +20,7 @@ public class ApiGlobalErrorResponse {
         return new ApiGlobalErrorResponse("Unauthorized", message, 401);
     }
 
-    public static ApiGlobalErrorResponse unAuthorized(String message) {
+    public static ApiGlobalErrorResponse forbidden(String message) {
         return new ApiGlobalErrorResponse("Forbidden", message, 403);
     }
 }

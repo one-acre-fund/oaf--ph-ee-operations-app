@@ -395,7 +395,7 @@ public class AppUser extends AbstractPersistableCustom<Long> implements UserDeta
         final String authorizationMessage = "User has no authority to " + prefix + " " + resourceType.toLowerCase() + "s";
         final String matchPermission = prefix + "_" + resourceType.toUpperCase();
 
-        if (!hasNotPermissionForAnyOf("ALL_FUNCTIONS", "ALL_FUNCTIONS_READ", matchPermission)) {
+        if (!hasNotPermissionForAnyOf("ALL_FUNCTIONS", matchPermission)) {
             return;
         }
 

@@ -33,6 +33,7 @@ import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.Table;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Objects;
 
@@ -55,7 +56,7 @@ public class Role extends AbstractPersistableCustom<Long> {
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.REFRESH, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "m_role_permission", joinColumns = @JoinColumn(name = "role_id"), inverseJoinColumns = @JoinColumn(name = "permission_id"))
-    private Collection<Permission> permissions;
+    private Collection<Permission> permissions = new ArrayList<>();
 
     public Role() {}
 
@@ -122,10 +123,12 @@ public class Role extends AbstractPersistableCustom<Long> {
      */
     public boolean hasPermissionTo(final String permissionCode) {
         boolean match = false;
-        for (final Permission permission : this.permissions) {
-            if (permission.hasCode(permissionCode)) {
-                match = true;
-                break;
+        if (this.permissions != null) {
+            for (final Permission permission : this.permissions) {
+                if (permission.hasCode(permissionCode)) {
+                    match = true;
+                    break;
+                }
             }
         }
         return match;
