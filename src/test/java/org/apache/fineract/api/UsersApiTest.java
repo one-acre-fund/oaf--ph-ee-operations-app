@@ -1,18 +1,13 @@
 package org.apache.fineract.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.role.RoleRepository;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.junit.jupiter.api.*;
+import org.mockito.*;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.servlet.http.HttpServletResponse;
@@ -35,10 +30,23 @@ class UsersApiTest {
     private RoleRepository roleRepository;
     @InjectMocks
     private UsersApi usersApi;
+    @Mock
+    AppUser connectedUser;
+
+    private MockedStatic<ThreadLocalContextUtil> mockedThreadLocalContext;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        mockedThreadLocalContext = mockStatic(ThreadLocalContextUtil.class);
+        mockedThreadLocalContext.when(ThreadLocalContextUtil::getCurrentUser).thenReturn(connectedUser);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (mockedThreadLocalContext != null) {
+            mockedThreadLocalContext.close();
+        }
     }
 
 

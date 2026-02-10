@@ -21,6 +21,7 @@ package org.apache.fineract.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.role.RoleRepository;
 import org.apache.fineract.organisation.user.AppUser;
@@ -54,13 +55,17 @@ public class UsersApi {
     @Autowired
     private RoleRepository roleRepository;
 
+    private final String resourceNameForPermissions = "USER";
+
     @GetMapping(path = "/users", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<AppUser> retrieveAll() {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
         return this.appuserRepository.findAll();
     }
 
     @GetMapping(path = "/user/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public AppUser retrieveOne(@PathVariable("userId") Long userId, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
         AppUser user = appuserRepository.findById(userId).get();
         if (user != null) {
             return user;
@@ -72,6 +77,7 @@ public class UsersApi {
 
     @GetMapping(path = "/user/{userId}/roles", produces = MediaType.APPLICATION_JSON_VALUE)
     public Collection<Role> retrieveRoles(@PathVariable("userId") Long userId, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
         AppUser user = appuserRepository.findById(userId).get();
         if (user != null) {
             return user.getRoles();
@@ -83,6 +89,7 @@ public class UsersApi {
 
     @PostMapping(path = "/user", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void create(@RequestBody AppUser appUser, HttpServletResponse response) throws IOException {
+        ThreadLocalContextUtil.getCurrentUser().validateHasCreatePermission(this.resourceNameForPermissions);
         AppUser existing = appuserRepository.findAppUserByName(appUser.getUsername());
         if (existing == null) {
             // TODO enforce password policy
@@ -103,6 +110,7 @@ public class UsersApi {
 
     @PutMapping(path = "/user/{userId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void update(@PathVariable("userId") Long userId, @RequestBody AppUser appUser, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
         Optional<AppUser> existing = appuserRepository.findById(userId);
         if (existing.isPresent()) {
             appUser.setId(userId);
@@ -117,6 +125,7 @@ public class UsersApi {
 
     @PostMapping(path = "/user/{userId}/deactivate", consumes = MediaType.APPLICATION_JSON_VALUE)
     public AppUser deactivate(@PathVariable("userId") Long userId, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasPermission("SUSPEND", this.resourceNameForPermissions);
         Optional<AppUser> existing = appuserRepository.findById(userId);
         if (existing.isPresent() && existing.get().isEnabled()) {
             existing.get().setEnabled(false);
@@ -129,6 +138,7 @@ public class UsersApi {
 
     @PostMapping(path = "/user/{userId}/activate", consumes = MediaType.APPLICATION_JSON_VALUE)
     public AppUser activate(@PathVariable("userId") Long userId, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasPermission("ACTIVATE", this.resourceNameForPermissions);
         Optional<AppUser> existing = appuserRepository.findById(userId);
         if (existing.isPresent() && !existing.get().isEnabled()) {
             existing.get().setEnabled(true);
@@ -142,6 +152,7 @@ public class UsersApi {
 
     @DeleteMapping(path = "/user/{userId}", produces = MediaType.TEXT_HTML_VALUE)
     public void delete(@PathVariable("userId") Long userId, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasDeletePermission(this.resourceNameForPermissions);
         if (appuserRepository.findById(userId).isPresent()) {
             appuserRepository.deleteById(userId);
         } else {
@@ -151,6 +162,7 @@ public class UsersApi {
 
     @PutMapping(path = "/user/{userId}/currencies", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void userCurrenciesAssignment(@PathVariable("userId") Long userId, @RequestBody List<String> currencies, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
         Optional<AppUser> existingUser = appuserRepository.findById(userId);
         if (existingUser.isPresent()) {
             AppUser user = existingUser.get();
@@ -163,6 +175,7 @@ public class UsersApi {
 
     @PutMapping(path = "/user/{userId}/payeePartyIds", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void userPayeePartyIdsAssignment(@PathVariable("userId") Long userId, @RequestBody List<String> payeePartyIds, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
         Optional<AppUser> existingUser = appuserRepository.findById(userId);
         if (existingUser.isPresent()) {
             AppUser user = existingUser.get();
@@ -175,6 +188,7 @@ public class UsersApi {
 
     @PutMapping(path = "/user/{userId}/payeePartyIdTypes", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void userPayeePartyIdTypesAssignment(@PathVariable("userId") Long userId, @RequestBody List<String> payeePartyIdTypes, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
         Optional<AppUser> existingUser = appuserRepository.findById(userId);
         if (existingUser.isPresent()) {
             AppUser user = existingUser.get();
@@ -188,6 +202,7 @@ public class UsersApi {
 
     @PutMapping(path = "/user/{userId}/roles", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void userAssignment(@PathVariable("userId") Long userId, @RequestParam("action") AssignmentAction action, @RequestBody EntityAssignments assignments, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
         AppUser existingUser;
         Optional<AppUser> existingUser1 = appuserRepository.findById(userId);
         if (existingUser1.isPresent()) {

@@ -2,6 +2,7 @@ package org.apache.fineract.api;
 
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.operations.BatchRepository;
 import org.apache.fineract.operations.BusinessKey;
 import org.apache.fineract.operations.BusinessKeyRepository;
@@ -72,12 +73,15 @@ public class OperationsApi {
 
     @Value("${channel-connector.transfer-path}")
     private String channelConnectorTransferPath;
+    private String transferResourceNameForPermissions = "TRANSFER";
+    private final String transactionRequestsResourceNameForPermissions = "TRANSACTION_REQUEST";
 
     @PostMapping("/transfer/{transactionId}/refund")
     public String refundTransfer(@RequestHeader("Platform-TenantId") String tenantId,
                                  @PathVariable("transactionId") String transactionId,
                                  @RequestBody String requestBody,
                                  HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasCreatePermission(this.transferResourceNameForPermissions);
         Transfer existingIncomingTransfer = transferRepository.findFirstByTransactionIdAndDirection(transactionId, "INCOMING");
         if (existingIncomingTransfer == null || !TransferStatus.COMPLETED.equals(existingIncomingTransfer.getStatus())) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
@@ -139,6 +143,7 @@ public class OperationsApi {
 
     @GetMapping("/transfer/{workflowInstanceKey}")
     public TransferDetail transferDetails(@PathVariable Long workflowInstanceKey) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.transferResourceNameForPermissions);
         Transfer transfer = transferRepository.findFirstByWorkflowInstanceKey(workflowInstanceKey);
         List<Task> tasks = taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey);
         List<Variable> variables = variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey);
@@ -147,6 +152,7 @@ public class OperationsApi {
 
     @GetMapping("/transactionRequest/{workflowInstanceKey}")
     public TransactionRequestDetail transactionRequestDetails(@PathVariable Long workflowInstanceKey) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.transactionRequestsResourceNameForPermissions);
         TransactionRequest transactionRequest = transactionRequestRepository.findFirstByWorkflowInstanceKey(workflowInstanceKey);
         List<Task> tasks = taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey);
         List<Variable> variables = variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey);
@@ -158,6 +164,7 @@ public class OperationsApi {
             @RequestParam(value = "businessKey") String businessKey,
             @RequestParam(value = "businessKeyType") String businessKeyType
     ) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.transferResourceNameForPermissions);
         return loadTransfers(businessKey, businessKeyType).stream()
                 .map(transfer -> variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(transfer.getWorkflowInstanceKey()))
                 .collect(Collectors.toList());

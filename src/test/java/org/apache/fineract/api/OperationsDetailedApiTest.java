@@ -3,18 +3,13 @@ package org.apache.fineract.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.fineract.TestUtils;
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.operations.*;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
 import org.apache.fineract.utils.DateUtil;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.junit.jupiter.api.*;
+import org.mockito.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -60,10 +55,23 @@ class OperationsDetailedApiTest {
 
     private TestUtils testUtils = new TestUtils();
 
+    @Mock
+    AppUser connectedUser;
+
+    private MockedStatic<ThreadLocalContextUtil> mockedThreadLocalContext;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        mockedThreadLocalContext = mockStatic(ThreadLocalContextUtil.class);
+        mockedThreadLocalContext.when(ThreadLocalContextUtil::getCurrentUser).thenReturn(connectedUser);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (mockedThreadLocalContext != null) {
+            mockedThreadLocalContext.close();
+        }
     }
 
     @DisplayName("Returns a list of AmsSource objects when amsSourcesString is valid JSON")

@@ -11,6 +11,7 @@ import org.apache.fineract.audit.data.AuditTemplateResponse;
 import org.apache.fineract.audit.service.AuditService;
 import org.apache.fineract.audit.data.AuditSource;
 import org.apache.fineract.audit.specs.AuditSpec;
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.utils.DateUtil;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +30,7 @@ import java.util.Objects;
 @Tag(name = "Audit API")
 public class AuditApiResource {
     private AuditService auditService;
+    private String resourceNameForPermissions = "AUDIT";
 
     public AuditApiResource(AuditService auditService) {
         this.auditService = auditService;
@@ -48,6 +50,7 @@ public class AuditApiResource {
                                                   @RequestParam(value = "orderBy", required = false) @Parameter(description = "orderBy") final String orderBy,
                                                   @RequestParam(value = "sortOrder", required = false) @Parameter(description = "sortOrder") final String sortOrder,
                                                   @QueryParam("dateFormat") @Parameter(description = "dateFormat") final String dateFormat) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
         AuditSpec auditSpec = new AuditSpec();
         LocalDateTime parsedMakerDateFrom = null;
         LocalDateTime parsedMakerDateTo = null;
@@ -69,11 +72,13 @@ public class AuditApiResource {
     }
     @GetMapping("/searchtemplate")
     public AuditTemplateResponse retrieveAuditTemplate() {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
         return this.auditService.retrieveAuditTemplate();
     }
 
     @GetMapping("/{id}")
     public AuditSource getAudit(@PathVariable("id") Long id) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
         return this.auditService.findById(id);
     }
 }

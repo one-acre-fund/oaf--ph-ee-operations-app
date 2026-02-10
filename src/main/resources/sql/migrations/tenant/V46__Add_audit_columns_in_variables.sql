@@ -1,8 +1,32 @@
-ALTER TABLE variables
-    ADD COLUMN IF NOT EXISTS created_date TIMESTAMP NULL;
-ALTER TABLE variables
-    ADD COLUMN IF NOT EXISTS last_modified_date TIMESTAMP NULL;
-ALTER TABLE variables
-    ADD COLUMN IF NOT EXISTS created_by VARCHAR(255);
-ALTER TABLE variables
-    ADD COLUMN IF NOT EXISTS last_modified_by VARCHAR(255);
+DELIMITER $$
+
+DROP PROCEDURE IF EXISTS add_audit_columns$$
+
+CREATE PROCEDURE add_audit_columns()
+BEGIN
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'variables' AND COLUMN_NAME = 'created_date') THEN
+        ALTER TABLE variables ADD COLUMN created_date TIMESTAMP NULL;
+    END IF;
+
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'variables' AND COLUMN_NAME = 'last_modified_date') THEN
+        ALTER TABLE variables ADD COLUMN last_modified_date TIMESTAMP NULL;
+    END IF;
+
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'variables' AND COLUMN_NAME = 'created_by') THEN
+        ALTER TABLE variables ADD COLUMN created_by VARCHAR(255);
+    END IF;
+
+    IF NOT EXISTS (SELECT * FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'variables' AND COLUMN_NAME = 'last_modified_by') THEN
+        ALTER TABLE variables ADD COLUMN last_modified_by VARCHAR(255);
+    END IF;
+END$$
+
+DELIMITER ;
+
+CALL add_audit_columns();
+
+DROP PROCEDURE IF EXISTS add_audit_columns;

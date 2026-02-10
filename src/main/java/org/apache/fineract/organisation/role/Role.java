@@ -113,4 +113,22 @@ public class Role extends AbstractPersistableCustom<Long> {
     public int hashCode() {
         return Objects.hash(name);
     }
+
+    /**
+     * Checks if the role has a specific permission by its code.
+     *
+     * @param permissionCode the code of the permission to check
+     * @return true if the role has the permission, false otherwise
+     */
+    public boolean hasPermissionTo(final String permissionCode) {
+        boolean match = false;
+        for (final Permission permission : this.permissions) {
+            if (permission.hasCode(permissionCode)) {
+                match = true;
+                break;
+            }
+        }
+        return match;
+    }
+
 }
