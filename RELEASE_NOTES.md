@@ -1,5 +1,11 @@
 Release Notes
 
+
+## Version 1.1.9 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        *  Elastic APM + OpenTelemetry Integration
+            * [CP-3980] - Integrate Elastic APM with PH
+
 ## Version 1.1.8 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * User Management
