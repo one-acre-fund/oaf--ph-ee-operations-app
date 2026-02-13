@@ -22,7 +22,11 @@ import org.mockito.MockitoAnnotations;
 
 import javax.servlet.http.HttpServletResponse;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
@@ -197,13 +201,19 @@ class RolesApiTest {
         // Arrange
         HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
         Long roleId = 1L;
+        
+        Role role = new Role();
+        role.setId(roleId);
+        role.setPermissions(new ArrayList<>());
+        role.setAppUsers(new ArrayList<>());
 
-        Mockito.when(roleRepository.existsById(roleId)).thenReturn(true);
+        Mockito.when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
 
         // Act
         rolesApi.delete(roleId, response);
 
         // Assert
+        Mockito.verify(roleRepository, Mockito.times(1)).saveAndFlush(role);
         Mockito.verify(roleRepository, Mockito.times(1)).deleteById(roleId);
         Mockito.verify(response, Mockito.never()).setStatus(HttpServletResponse.SC_NOT_FOUND);
     }
@@ -215,12 +225,45 @@ class RolesApiTest {
         HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
         Long roleId = null;
 
+        Mockito.when(roleRepository.findById(roleId)).thenReturn(Optional.empty());
+
         // Act
         rolesApi.delete(roleId, response);
 
         // Assert
         Mockito.verify(roleRepository, Mockito.never()).deleteById(Mockito.any());
         Mockito.verify(response, Mockito.times(1)).setStatus(HttpServletResponse.SC_NOT_FOUND);
+    }
+
+    @DisplayName("Delete role clears permissions and appUsers before deletion")
+    @Test
+    void delete_role_clears_relationships() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        
+        Permission permission1 = new Permission();
+        permission1.setId(1L);
+        Permission permission2 = new Permission();
+        permission2.setId(2L);
+        
+        Collection<Permission> permissions = new ArrayList<>(Arrays.asList(permission1, permission2));
+        role.setPermissions(permissions);
+        role.setAppUsers(new ArrayList<>());
+
+        Mockito.when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.delete(roleId, response);
+
+        // Assert
+        assertEquals(0, role.getPermissions().size());
+        assertEquals(0, role.getAppusers().size());
+        Mockito.verify(roleRepository, Mockito.times(1)).saveAndFlush(role);
+        Mockito.verify(roleRepository, Mockito.times(1)).deleteById(roleId);
     }
 
     @DisplayName("Assign new permissions to a role successfully")
