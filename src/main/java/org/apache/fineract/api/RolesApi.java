@@ -164,8 +164,9 @@ public class RolesApi {
     public void permissionAssignment(@PathVariable("roleId") Long roleId, @RequestBody PermissionsCommand permissionsCommand,
                                      HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
-        Role existingRole = roleRepository.findById(roleId).get();
-        if (existingRole != null) {
+        Optional<Role> optionalRole = roleRepository.findById(roleId);
+        if (optionalRole.isPresent()) {
+            Role existingRole = optionalRole.get();
             final Collection<Permission> allPermissions = this.permissionRepository.findAll();
             final Map<String, Boolean> commandPermissions = permissionsCommand.getPermissions();
             final Map<String, Boolean> changedPermissions = new HashMap<>();

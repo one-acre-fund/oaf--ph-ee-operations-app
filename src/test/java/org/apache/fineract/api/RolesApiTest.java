@@ -517,12 +517,13 @@ class RolesApiTest {
 
         HttpServletResponse response = mock(HttpServletResponse.class);
 
-        // Act & Assert - should throw NoSuchElementException
-        assertThrows(NoSuchElementException.class, () -> {
-            rolesApi.permissionAssignment(roleId, command, response);
-        });
-        
+        // Act
+        rolesApi.permissionAssignment(roleId, command, response);
+
+        // Assert
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_NOT_FOUND);
         verify(roleRepository, never()).saveAndFlush(Mockito.any());
+        verify(permissionRepository, never()).findAll();
     }
 
     @DisplayName("Permission assignment handles unknown permission codes gracefully")
