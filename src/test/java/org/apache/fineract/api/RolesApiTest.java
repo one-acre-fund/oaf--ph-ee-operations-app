@@ -141,6 +141,42 @@ class RolesApiTest {
     }
 
     @Test
+    @DisplayName("Retrieve permissions - role not found returns 404")
+    void test_retrieve_permissions_role_not_found() {
+        // Arrange
+        Long roleId = 999L;
+        HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+
+        Mockito.when(roleRepository.findById(roleId)).thenReturn(Optional.empty());
+
+        // Act
+        RolePermissionsData result = rolesApi.retrievePermissions(roleId, response);
+
+        // Assert
+        Assertions.assertNull(result);
+        Mockito.verify(response, Mockito.times(1)).setStatus(HttpServletResponse.SC_NOT_FOUND);
+        Mockito.verify(permissionRepository, Mockito.never()).findAllPermissionsWithRoleSelection(Mockito.any());
+    }
+
+    @Test
+    @DisplayName("Retrieve permissions - permission check failure throws exception")
+    void test_retrieve_permissions_no_read_permission() {
+        // Arrange
+        Long roleId = 1L;
+        HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
+
+        Mockito.doThrow(new RuntimeException("User does not have READ permission"))
+                .when(connectedUser).validateHasReadPermission("ROLE");
+
+        // Act & Assert
+        Assertions.assertThrows(RuntimeException.class, () -> {
+            rolesApi.retrievePermissions(roleId, response);
+        });
+
+        Mockito.verify(roleRepository, Mockito.never()).findById(Mockito.any());
+    }
+
+    @Test
     void test_create_role_with_unique_name() {
         HttpServletResponse response = mock(HttpServletResponse.class);
         Role newRole = new Role();
@@ -264,6 +300,52 @@ class RolesApiTest {
         assertEquals(0, role.getAppusers().size());
         Mockito.verify(roleRepository, Mockito.times(1)).saveAndFlush(role);
         Mockito.verify(roleRepository, Mockito.times(1)).deleteById(roleId);
+    }
+
+    @DisplayName("Permission assignment - no update permission throws exception")
+    @Test
+    void test_permission_assignment_no_update_permission() {
+        // Arrange
+        Long roleId = 1L;
+        Map<String, Boolean> permissionsMap = new HashMap<>();
+        permissionsMap.put("READ_USER", true);
+        PermissionsCommand command = new PermissionsCommand(permissionsMap);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        Mockito.doThrow(new RuntimeException("User does not have UPDATE permission"))
+                .when(connectedUser).validateHasUpdatePermission("ROLE");
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> {
+            rolesApi.permissionAssignment(roleId, command, response);
+        });
+
+        verify(roleRepository, never()).findById(Mockito.any());
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+    }
+
+    @DisplayName("Permission assignment - empty permissions map does not save")
+    @Test
+    void test_permission_assignment_empty_map() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setPermissions(new ArrayList<>());
+
+        Map<String, Boolean> permissionsMap = new HashMap<>(); // Empty map
+        PermissionsCommand command = new PermissionsCommand(permissionsMap);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(permissionRepository.findAll()).thenReturn(Collections.emptyList());
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.permissionAssignment(roleId, command, response);
+
+        // Assert
+        verify(roleRepository, never()).saveAndFlush(existingRole);
     }
 
     @DisplayName("Assign new permissions to a role successfully")
