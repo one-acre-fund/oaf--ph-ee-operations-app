@@ -20,9 +20,13 @@ package org.apache.fineract.api;
 
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.organisation.permission.Permission;
+import org.apache.fineract.organisation.permission.PermissionData;
 import org.apache.fineract.organisation.permission.PermissionRepository;
+import org.apache.fineract.organisation.role.PermissionsCommand;
 import org.apache.fineract.organisation.role.Role;
+import org.apache.fineract.organisation.role.RolePermissionsData;
 import org.apache.fineract.organisation.role.RoleRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -36,8 +40,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletResponse;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.fineract.api.AssignmentAction.ASSIGN;
@@ -52,13 +60,17 @@ public class RolesApi {
     @Autowired
     private PermissionRepository permissionRepository;
 
+    private final String resourceNameForPermissions = "ROLE";
+
     @GetMapping(path = "/roles", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<Role> retrieveAll() {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
         return this.roleRepository.findAll();
     }
 
     @GetMapping(path = "/role/{roleId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Role retrieveOne(@PathVariable("roleId") Long roleId, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
         Role role = roleRepository.findById(roleId).get();
         if(role != null) {
             return role;
@@ -69,10 +81,13 @@ public class RolesApi {
     }
 
     @GetMapping(path = "/role/{roleId}/permissions", produces = MediaType.APPLICATION_JSON_VALUE)
-    public Collection<Permission> retrievePermissions(@PathVariable("roleId") Long roleId, HttpServletResponse response) {
-        Role role = roleRepository.findById(roleId).get();
-        if(role != null) {
-            return role.getPermissions();
+    public RolePermissionsData retrievePermissions(@PathVariable("roleId") Long roleId, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
+        Optional<Role> optionalRole = roleRepository.findById(roleId);
+        if(optionalRole.isPresent()) {
+            Role role = optionalRole.get();
+            final List<PermissionData> permissionUsageData = this.permissionRepository.findAllPermissionsWithRoleSelection(roleId);
+            return new RolePermissionsData(role.getId(), role.getName(), role.getDescription(), role.getDisabled(), permissionUsageData);
         } else {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             return null;
@@ -81,6 +96,7 @@ public class RolesApi {
 
     @PostMapping(path = "/role", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void create(@RequestBody Role role, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasCreatePermission(this.resourceNameForPermissions);
         Role existing = roleRepository.getRoleByName(role.getName());
         if (existing == null) {
             role.setId(null);
@@ -92,6 +108,7 @@ public class RolesApi {
 
     @PutMapping(path = "/role/{roleId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void update(@PathVariable("roleId") Long roleId, @RequestBody Role role, HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
         Role existing = roleRepository.findById(roleId).get();
         if (existing != null) {
             role.setId(roleId);
@@ -103,52 +120,90 @@ public class RolesApi {
         }
     }
 
+
     @DeleteMapping(path = "/role/{roleId}")
     public void delete(@PathVariable("roleId") Long roleId, HttpServletResponse response) {
-        if(roleRepository.existsById(roleId)) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasDeletePermission(this.resourceNameForPermissions);
+        Optional<Role> optionalRole = roleRepository.findById(roleId);
+        if(optionalRole.isPresent()) {
+            Role role = optionalRole.get();
+            // Clear relationships before deleting to avoid orphan removal issues
+            role.getPermissions().clear();
+            role.getAppusers().clear();
+            roleRepository.saveAndFlush(role);
             roleRepository.deleteById(roleId);
         } else {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
     }
 
-    @PutMapping(path = "/role/{roleId}/permissions", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public void permissionAssignment(@PathVariable("roleId") Long roleId, @RequestParam("action") AssignmentAction action,
-                                     @RequestBody EntityAssignments assignments, HttpServletResponse response) {
-        Role existingRole = roleRepository.findById(roleId).get();
-        if (existingRole != null) {
-            Collection<Permission> permissionToAssign = existingRole.getPermissions();
-            List<Long> existingPermissionIds = permissionToAssign.stream()
-                    .map(Permission::getId)
-                    .collect(toList());
-            List<Permission> deltaPermissions = assignments.getEntityIds().stream()
-                    .filter(id -> {
-                        if (ASSIGN.equals(action)) {
-                            return !existingPermissionIds.contains(id);
-                        } else { // revoke
-                            return existingPermissionIds.contains(id);
-                        }
-                    })
-                    .map(id -> {
-                        Permission p = permissionRepository.findById(id).get();
-                        if (p == null) {
-                            throw new RuntimeException("Invalid permission id: " + id + " can not continue assignment!");
-                        } else {
-                            return p;
-                        }
-                    }).collect(toList());
-
-            if (!deltaPermissions.isEmpty()) {
-                if (ASSIGN.equals(action)) {
-                    permissionToAssign.addAll(deltaPermissions);
-                } else { // revoke
-                    permissionToAssign.removeAll(deltaPermissions);
-                }
-                existingRole.setPermissions(permissionToAssign);
-                roleRepository.saveAndFlush(existingRole);
+    @PostMapping(path = "/role/{roleId}")
+    public void updateRoleStatus(@PathVariable("roleId") Long roleId, 
+                                  @RequestParam("command") String command,
+                                  HttpServletResponse response) {
+        Optional<Role> optionalRole = roleRepository.findById(roleId);
+        if (optionalRole.isPresent()) {
+            Role role = optionalRole.get();
+            if ("disable".equalsIgnoreCase(command)) {
+                ThreadLocalContextUtil.getCurrentUser().validateHasPermission("DISABLE", this.resourceNameForPermissions);
+                role.setDisabled(true);
+                roleRepository.saveAndFlush(role);
+            } else if ("enable".equalsIgnoreCase(command)) {
+                ThreadLocalContextUtil.getCurrentUser().validateHasPermission("ENABLE", this.resourceNameForPermissions);
+                role.setDisabled(false);
+                roleRepository.saveAndFlush(role);
+            } else {
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             }
         } else {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
+    }
+
+    @PutMapping(path = "/role/{roleId}/permissions", consumes = MediaType.APPLICATION_JSON_VALUE)
+    public void permissionAssignment(@PathVariable("roleId") Long roleId, @RequestBody PermissionsCommand permissionsCommand,
+                                     HttpServletResponse response) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
+        Role existingRole = roleRepository.findById(roleId).get();
+        if (existingRole != null) {
+            final Collection<Permission> allPermissions = this.permissionRepository.findAll();
+            final Map<String, Boolean> commandPermissions = permissionsCommand.getPermissions();
+            final Map<String, Boolean> changedPermissions = new HashMap<>();
+            
+            for (final String permissionCode : commandPermissions.keySet()) {
+                final boolean isSelected = commandPermissions.get(permissionCode).booleanValue();
+                final Permission permission = findPermissionByCode(allPermissions, permissionCode);
+                
+                if (permission != null) {
+                    boolean changed = false;
+                    if (isSelected && !existingRole.getPermissions().contains(permission)) {
+                        existingRole.getPermissions().add(permission);
+                        changed = true;
+                    } else if (!isSelected && existingRole.getPermissions().contains(permission)) {
+                        existingRole.getPermissions().remove(permission);
+                        changed = true;
+                    }
+                    
+                    if (changed) {
+                        changedPermissions.put(permissionCode, isSelected);
+                    }
+                }
+            }
+            
+            if (!changedPermissions.isEmpty()) {
+                this.roleRepository.saveAndFlush(existingRole);
+            }
+        } else {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        }
+    }
+    
+    private Permission findPermissionByCode(final Collection<Permission> permissions, final String permissionCode) {
+        for (final Permission permission : permissions) {
+            if (permission.getCode().equalsIgnoreCase(permissionCode)) {
+                return permission;
+            }
+        }
+        return null;
     }
 }

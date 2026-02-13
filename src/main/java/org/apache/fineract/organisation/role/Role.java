@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.fineract.config.CustomAuditingEntityListener;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.apache.fineract.organisation.permission.Permission;
+import org.apache.fineract.organisation.permission.PermissionData;
 import org.apache.fineract.organisation.user.AppUser;
 
 import javax.persistence.CascadeType;
@@ -35,6 +36,7 @@ import javax.persistence.ManyToMany;
 import javax.persistence.Table;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
 @Entity

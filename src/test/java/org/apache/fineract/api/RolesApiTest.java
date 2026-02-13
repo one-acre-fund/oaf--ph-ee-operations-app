@@ -1,15 +1,22 @@
 package org.apache.fineract.api;
 
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.organisation.permission.Permission;
+import org.apache.fineract.organisation.permission.PermissionData;
 import org.apache.fineract.organisation.permission.PermissionRepository;
+import org.apache.fineract.organisation.role.PermissionsCommand;
 import org.apache.fineract.organisation.role.Role;
+import org.apache.fineract.organisation.role.RolePermissionsData;
 import org.apache.fineract.organisation.role.RoleRepository;
+import org.apache.fineract.organisation.user.AppUser;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
@@ -24,6 +31,7 @@ import static org.mockito.Mockito.never;
 
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 class RolesApiTest {
     @Mock
@@ -32,12 +40,26 @@ class RolesApiTest {
     @Mock
     private PermissionRepository permissionRepository;
 
+    @Mock
+    private AppUser connectedUser;
+
     @InjectMocks
     RolesApi rolesApi;
+
+    private MockedStatic<ThreadLocalContextUtil> mockedThreadLocalContext;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        mockedThreadLocalContext = Mockito.mockStatic(ThreadLocalContextUtil.class);
+        mockedThreadLocalContext.when(ThreadLocalContextUtil::getCurrentUser).thenReturn(connectedUser);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (mockedThreadLocalContext != null) {
+            mockedThreadLocalContext.close();
+        }
     }
 
     @Test
@@ -74,25 +96,44 @@ class RolesApiTest {
         Long roleId = 1L;
         Role role = new Role();
         role.setId(roleId);
-        Permission permission1 = new Permission();
-        permission1.setId(1L);
-        Permission permission2 = new Permission();
-        permission2.setId(2L);
-        Collection<Permission> permissions = Arrays.asList(permission1, permission2);
-        role.setPermissions(permissions);
+        role.setName("Admin");
+        role.setDescription("Administrator role");
+        role.setDisabled(false);
+
+        // Create sample PermissionData - some selected, some not
+        PermissionData permission1 = new PermissionData("authorization", "READ_USER", "USER", "READ", true);
+        PermissionData permission2 = new PermissionData("authorization", "CREATE_USER", "USER", "CREATE", true);
+        PermissionData permission3 = new PermissionData("authorization", "UPDATE_USER", "USER", "UPDATE", false);
+        PermissionData permission4 = new PermissionData("authorization", "DELETE_USER", "USER", "DELETE", false);
+        
+        List<PermissionData> allPermissions = Arrays.asList(permission1, permission2, permission3, permission4);
 
         Mockito.when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+        Mockito.when(permissionRepository.findAllPermissionsWithRoleSelection(roleId)).thenReturn(allPermissions);
 
         HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
         // Act
-        Collection<Permission> result = rolesApi.retrievePermissions(roleId, response);
+        RolePermissionsData result = rolesApi.retrievePermissions(roleId, response);
 
         // Assert
         Assertions.assertNotNull(result);
-        Assertions.assertEquals(2, result.size());
-        Assertions.assertTrue(result.contains(permission1));
-        Assertions.assertTrue(result.contains(permission2));
+        Assertions.assertEquals(4, result.getPermissionUsageData().size());
+        
+        // Verify selected permissions
+        List<PermissionData> selectedPermissions = result.getPermissionUsageData().stream()
+                .filter(PermissionData::getSelected)
+                .collect(Collectors.toList());
+        Assertions.assertEquals(2, selectedPermissions.size());
+        
+        // Verify non-selected permissions
+        List<PermissionData> nonSelectedPermissions = result.getPermissionUsageData().stream()
+                .filter(p -> !p.getSelected())
+                .collect(Collectors.toList());
+        Assertions.assertEquals(2, nonSelectedPermissions.size());
+        
+        // Verify the repository method was called
+        Mockito.verify(permissionRepository, Mockito.times(1)).findAllPermissionsWithRoleSelection(roleId);
     }
 
     @Test
@@ -182,40 +223,528 @@ class RolesApiTest {
         Mockito.verify(response, Mockito.times(1)).setStatus(HttpServletResponse.SC_NOT_FOUND);
     }
 
-    @DisplayName("Assign permissions to a role successfully")
+    @DisplayName("Assign new permissions to a role successfully")
     @Test
-    void test_assign_permissions_successfully() {
+    void test_assign_new_permissions_to_role() {
         // Arrange
         Long roleId = 1L;
-        AssignmentAction action = AssignmentAction.ASSIGN;
-        EntityAssignments assignments = new EntityAssignments();
-        // list
-        List<Long> entityIds = new ArrayList<>();
-        entityIds.add(2L);
-        entityIds.add(3L);
-        assignments.setEntityIds(entityIds);
-
         Role existingRole = new Role();
         existingRole.setId(roleId);
         existingRole.setPermissions(new ArrayList<>());
 
         Permission permission1 = new Permission();
-        permission1.setId(2L);
+        permission1.setCode("READ_USER");
         Permission permission2 = new Permission();
-        permission2.setId(3L);
+        permission2.setCode("CREATE_USER");
+
+        List<Permission> allPermissions = Arrays.asList(permission1, permission2);
+
+        Map<String, Boolean> permissionsMap = new HashMap<>();
+        permissionsMap.put("READ_USER", true);
+        permissionsMap.put("CREATE_USER", true);
+        
+        PermissionsCommand command = new PermissionsCommand(permissionsMap);
 
         when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
-        when(permissionRepository.findById(2L)).thenReturn(Optional.of(permission1));
-        when(permissionRepository.findById(3L)).thenReturn(Optional.of(permission2));
+        when(permissionRepository.findAll()).thenReturn(allPermissions);
 
         HttpServletResponse response = mock(HttpServletResponse.class);
 
         // Act
-        rolesApi.permissionAssignment(roleId, action, assignments, response);
+        rolesApi.permissionAssignment(roleId, command, response);
 
         // Assert
         assertEquals(2, existingRole.getPermissions().size());
+        assertTrue(existingRole.getPermissions().contains(permission1));
+        assertTrue(existingRole.getPermissions().contains(permission2));
         verify(roleRepository, times(1)).saveAndFlush(existingRole);
+    }
+
+    @DisplayName("Remove permissions from a role successfully")
+    @Test
+    void test_remove_permissions_from_role() {
+        // Arrange
+        Long roleId = 1L;
+        Permission permission1 = new Permission();
+        permission1.setCode("READ_USER");
+        Permission permission2 = new Permission();
+        permission2.setCode("CREATE_USER");
+
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        Collection<Permission> rolePermissions = new ArrayList<>();
+        rolePermissions.add(permission1);
+        rolePermissions.add(permission2);
+        existingRole.setPermissions(rolePermissions);
+
+        List<Permission> allPermissions = Arrays.asList(permission1, permission2);
+
+        Map<String, Boolean> permissionsMap = new HashMap<>();
+        permissionsMap.put("READ_USER", false);
+        permissionsMap.put("CREATE_USER", false);
+        
+        PermissionsCommand command = new PermissionsCommand(permissionsMap);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(permissionRepository.findAll()).thenReturn(allPermissions);
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.permissionAssignment(roleId, command, response);
+
+        // Assert
+        assertEquals(0, existingRole.getPermissions().size());
+        verify(roleRepository, times(1)).saveAndFlush(existingRole);
+    }
+
+    @DisplayName("Mix of adding and removing permissions from a role")
+    @Test
+    void test_mixed_permission_assignment() {
+        // Arrange
+        Long roleId = 1L;
+        Permission permission1 = new Permission();
+        permission1.setCode("READ_USER");
+        Permission permission2 = new Permission();
+        permission2.setCode("CREATE_USER");
+        Permission permission3 = new Permission();
+        permission3.setCode("UPDATE_USER");
+
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        Collection<Permission> rolePermissions = new ArrayList<>();
+        rolePermissions.add(permission1); // Already has READ_USER
+        existingRole.setPermissions(rolePermissions);
+
+        List<Permission> allPermissions = Arrays.asList(permission1, permission2, permission3);
+
+        Map<String, Boolean> permissionsMap = new HashMap<>();
+        permissionsMap.put("READ_USER", false);  // Remove existing
+        permissionsMap.put("CREATE_USER", true);  // Add new
+        permissionsMap.put("UPDATE_USER", true);  // Add new
+        
+        PermissionsCommand command = new PermissionsCommand(permissionsMap);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(permissionRepository.findAll()).thenReturn(allPermissions);
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.permissionAssignment(roleId, command, response);
+
+        // Assert
+        assertEquals(2, existingRole.getPermissions().size());
+        assertFalse(existingRole.getPermissions().contains(permission1));
+        assertTrue(existingRole.getPermissions().contains(permission2));
+        assertTrue(existingRole.getPermissions().contains(permission3));
+        verify(roleRepository, times(1)).saveAndFlush(existingRole);
+    }
+
+    @DisplayName("No changes when permissions already in desired state")
+    @Test
+    void test_no_permission_changes() {
+        // Arrange
+        Long roleId = 1L;
+        Permission permission1 = new Permission();
+        permission1.setCode("READ_USER");
+        Permission permission2 = new Permission();
+        permission2.setCode("CREATE_USER");
+
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        Collection<Permission> rolePermissions = new ArrayList<>();
+        rolePermissions.add(permission1);
+        existingRole.setPermissions(rolePermissions);
+
+        List<Permission> allPermissions = Arrays.asList(permission1, permission2);
+
+        Map<String, Boolean> permissionsMap = new HashMap<>();
+        permissionsMap.put("READ_USER", true);   // Already assigned
+        permissionsMap.put("CREATE_USER", false); // Already not assigned
+        
+        PermissionsCommand command = new PermissionsCommand(permissionsMap);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(permissionRepository.findAll()).thenReturn(allPermissions);
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.permissionAssignment(roleId, command, response);
+
+        // Assert
+        assertEquals(1, existingRole.getPermissions().size());
+        verify(roleRepository, never()).saveAndFlush(existingRole);
+    }
+
+    @DisplayName("Permission assignment when role does not exist")
+    @Test
+    void test_permission_assignment_role_not_found() {
+        // Arrange
+        Long roleId = 999L;
+        Map<String, Boolean> permissionsMap = new HashMap<>();
+        permissionsMap.put("READ_USER", true);
+        
+        PermissionsCommand command = new PermissionsCommand(permissionsMap);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.empty());
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act & Assert - should throw NoSuchElementException
+        assertThrows(NoSuchElementException.class, () -> {
+            rolesApi.permissionAssignment(roleId, command, response);
+        });
+        
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+    }
+
+    @DisplayName("Permission assignment handles unknown permission codes gracefully")
+    @Test
+    void test_permission_assignment_with_unknown_code() {
+        // Arrange
+        Long roleId = 1L;
+        Permission permission1 = new Permission();
+        permission1.setCode("READ_USER");
+
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setPermissions(new ArrayList<>());
+
+        List<Permission> allPermissions = Arrays.asList(permission1);
+
+        Map<String, Boolean> permissionsMap = new HashMap<>();
+        permissionsMap.put("READ_USER", true);
+        permissionsMap.put("UNKNOWN_PERMISSION", true); // This doesn't exist
+        
+        PermissionsCommand command = new PermissionsCommand(permissionsMap);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(permissionRepository.findAll()).thenReturn(allPermissions);
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.permissionAssignment(roleId, command, response);
+
+        // Assert - only valid permission should be added
+        assertEquals(1, existingRole.getPermissions().size());
+        assertTrue(existingRole.getPermissions().contains(permission1));
+        verify(roleRepository, times(1)).saveAndFlush(existingRole);
+    }
+
+    @DisplayName("Permission assignment is case insensitive for permission codes")
+    @Test
+    void test_permission_assignment_case_insensitive() {
+        // Arrange
+        Long roleId = 1L;
+        Permission permission1 = new Permission();
+        permission1.setCode("READ_USER");
+
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setPermissions(new ArrayList<>());
+
+        List<Permission> allPermissions = Arrays.asList(permission1);
+
+        Map<String, Boolean> permissionsMap = new HashMap<>();
+        permissionsMap.put("read_user", true); // lowercase
+        
+        PermissionsCommand command = new PermissionsCommand(permissionsMap);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(permissionRepository.findAll()).thenReturn(allPermissions);
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.permissionAssignment(roleId, command, response);
+
+        // Assert
+        assertEquals(1, existingRole.getPermissions().size());
+        assertTrue(existingRole.getPermissions().contains(permission1));
+        verify(roleRepository, times(1)).saveAndFlush(existingRole);
+    }
+
+    @DisplayName("Disable an enabled role successfully")
+    @Test
+    void test_disable_enabled_role() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setName("Admin");
+        role.setDisabled(false);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "disable", response);
+
+        // Assert
+        assertTrue(role.getDisabled());
+        verify(roleRepository, times(1)).saveAndFlush(role);
+        verify(response, never()).setStatus(Mockito.anyInt());
+    }
+
+    @DisplayName("Enable a disabled role successfully")
+    @Test
+    void test_enable_disabled_role() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setName("User");
+        role.setDisabled(true);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "enable", response);
+
+        // Assert
+        assertFalse(role.getDisabled());
+        verify(roleRepository, times(1)).saveAndFlush(role);
+        verify(response, never()).setStatus(Mockito.anyInt());
+    }
+
+    @DisplayName("Disable command is case insensitive")
+    @Test
+    void test_disable_command_case_insensitive() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setDisabled(false);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "DISABLE", response);
+
+        // Assert
+        assertTrue(role.getDisabled());
+        verify(roleRepository, times(1)).saveAndFlush(role);
+    }
+
+    @DisplayName("Enable command is case insensitive")
+    @Test
+    void test_enable_command_case_insensitive() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setDisabled(true);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "ENABLE", response);
+
+        // Assert
+        assertFalse(role.getDisabled());
+        verify(roleRepository, times(1)).saveAndFlush(role);
+    }
+
+    @DisplayName("Disable an already disabled role does not cause error")
+    @Test
+    void test_disable_already_disabled_role() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setDisabled(true);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "disable", response);
+
+        // Assert
+        assertTrue(role.getDisabled());
+        verify(roleRepository, times(1)).saveAndFlush(role);
+        verify(response, never()).setStatus(Mockito.anyInt());
+    }
+
+    @DisplayName("Enable an already enabled role does not cause error")
+    @Test
+    void test_enable_already_enabled_role() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setDisabled(false);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "enable", response);
+
+        // Assert
+        assertFalse(role.getDisabled());
+        verify(roleRepository, times(1)).saveAndFlush(role);
+        verify(response, never()).setStatus(Mockito.anyInt());
+    }
+
+    @DisplayName("Update role status with non-existent role returns 404")
+    @Test
+    void test_update_status_role_not_found() {
+        // Arrange
+        Long roleId = 999L;
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.empty());
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "disable", response);
+
+        // Assert
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_NOT_FOUND);
+    }
+
+    @DisplayName("Update role status with invalid command returns 400")
+    @Test
+    void test_update_status_invalid_command() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setDisabled(false);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "invalid", response);
+
+        // Assert
+        assertFalse(role.getDisabled()); // Should not change
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    }
+
+    @DisplayName("Update role status with null command returns 400")
+    @Test
+    void test_update_status_null_command() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setDisabled(false);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, null, response);
+
+        // Assert
+        assertFalse(role.getDisabled());
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    }
+
+    @DisplayName("Update role status with empty command returns 400")
+    @Test
+    void test_update_status_empty_command() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setDisabled(false);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "", response);
+
+        // Assert
+        assertFalse(role.getDisabled());
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    }
+
+    @DisplayName("Update role status with whitespace command returns 400")
+    @Test
+    void test_update_status_whitespace_command() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setDisabled(false);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "   ", response);
+
+        // Assert
+        assertFalse(role.getDisabled());
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+    }
+
+    @DisplayName("Disable command with mixed case works correctly")
+    @Test
+    void test_disable_mixed_case_command() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setDisabled(false);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "DiSaBlE", response);
+
+        // Assert
+        assertTrue(role.getDisabled());
+        verify(roleRepository, times(1)).saveAndFlush(role);
+    }
+
+    @DisplayName("Enable command with mixed case works correctly")
+    @Test
+    void test_enable_mixed_case_command() {
+        // Arrange
+        Long roleId = 1L;
+        Role role = new Role();
+        role.setId(roleId);
+        role.setDisabled(true);
+
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(role));
+
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        // Act
+        rolesApi.updateRoleStatus(roleId, "EnAbLe", response);
+
+        // Assert
+        assertFalse(role.getDisabled());
+        verify(roleRepository, times(1)).saveAndFlush(role);
     }
 
 }
