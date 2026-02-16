@@ -4,6 +4,7 @@ import com.amazonaws.util.StringUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.data.ErrorResponse;
 import org.apache.fineract.exception.WriteToCsvException;
 import org.apache.fineract.operations.*;
@@ -65,6 +66,9 @@ public class OperationsDetailedApi {
     @Autowired
     private AMSConfig amsConfig;
 
+    private final String transfersResourceNameForPermissions = "TRANSFER";
+    private final String transactionRequestsResourceNameForPermissions = "TRANSACTION_REQUEST";
+
     @GetMapping("/ams/sources")
     public List<AMSConfig.AmsSource> getAmsSourcesList() {
         return amsConfig.getAmsSourcesList();
@@ -72,6 +76,7 @@ public class OperationsDetailedApi {
 
     @GetMapping("/transfers")
     public Page<TransferResponse> transfers(@RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "20") Integer size, @RequestParam(value = "payerPartyId", required = false) String payerPartyId, @RequestParam(value = "payerDfspId", required = false) String payerDfspId, @RequestParam(value = "payeePartyId", required = false) String payeePartyId, @RequestParam(value = "payeeDfspId", required = false) String payeeDfspId, @RequestParam(value = "transactionId", required = false) String transactionId, @RequestParam(value = "status", required = false) String status, @RequestParam(value = "amount", required = false) BigDecimal amount, @RequestParam(value = "currency", required = false) String currency, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "direction", required = false) String direction, @RequestParam(value = "sortedBy", required = false) String sortedBy, @RequestParam(value = "partyId", required = false) String partyId, @RequestParam(value = "partyIdType", required = false) String partyIdType, @RequestParam(value = "clientCorrelationId", required = false) String clientCorrelationId, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.transfersResourceNameForPermissions);
         List<Specifications<Transfer>> specs = getSearchSpecifications(status, amount, currency, direction, partyId, partyIdType, clientCorrelationId);
         specs.addAll(getSearchSpecification(payerPartyId, payerDfspId, payeeDfspId, payeePartyId, transactionId));
 
@@ -238,6 +243,7 @@ public class OperationsDetailedApi {
 
     @GetMapping("/transactionRequests")
     public Page<TransactionRequest> transactionRequests(@RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "20") Integer size, @RequestParam(value = "payerPartyId", required = false) String payerPartyId, @RequestParam(value = "payeePartyId", required = false) String payeePartyId, @RequestParam(value = "payeePartyIdType", required = false) String payeePartyIdType, @RequestParam(value = "payeeDfspId", required = false) String payeeDfspId, @RequestParam(value = "payerDfspId", required = false) String payerDfspId, @RequestParam(value = "transactionId", required = false) String transactionId, @RequestParam(value = "state", required = false) String state, @RequestParam(value = "amount", required = false) BigDecimal amount, @RequestParam(value = "currency", required = false) String currency, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "direction", required = false) String direction, @RequestParam(value = "clientCorrelationId", required = false) String clientCorrelationId,@RequestParam(value = "externalId", required = false) String externalId, @RequestParam(value = "sortedBy", required = false) String sortedBy, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder) {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.transactionRequestsResourceNameForPermissions);
         List<Specifications<TransactionRequest>> specs = new ArrayList<>();
         if (payerPartyId != null) {
             specs.add(TransactionRequestSpecs.like(TransactionRequest_.payerPartyId, payerPartyId));
@@ -457,6 +463,7 @@ public class OperationsDetailedApi {
     @PostMapping("/transactionRequests")
     public Map<String, String> filterTransactionRequests(HttpServletResponse response, @RequestParam(value = "command", required = false, defaultValue = "export") String command, @RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "10000") Integer size, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "state", required = false) String state, @RequestBody Map<String, List<String>> body) {
 
+        ThreadLocalContextUtil.getCurrentUser().validateHasExportPermission(this.transactionRequestsResourceNameForPermissions);
         if (!command.equalsIgnoreCase("export")) {
             return new ErrorResponse.Builder().setErrorCode("" + HttpServletResponse.SC_NOT_FOUND).setErrorDescription(command + " not supported").setDeveloperMessage("Possible supported command is " + command).build();
         }
@@ -516,6 +523,7 @@ public class OperationsDetailedApi {
     @PostMapping("/transfers/export")
     public Map<String, String> exportTransfers(HttpServletResponse response, @RequestParam(value = "page", required = false, defaultValue = "0") Integer page, @RequestParam(value = "size", required = false, defaultValue = "10000") Integer size, @RequestParam(value = "sortedOrder", required = false, defaultValue = "DESC") String sortedOrder, @RequestParam(value = "startFrom", required = false) String startFrom, @RequestParam(value = "startTo", required = false) String startTo, @RequestParam(value = "state", required = false) String state, @RequestBody Map<String, List<String>> body) {
 
+        ThreadLocalContextUtil.getCurrentUser().validateHasExportPermission(this.transfersResourceNameForPermissions);
         List<String> filterByList = new ArrayList<>(body.keySet());
         List<Specifications<Transfer>> specs = new ArrayList<>();
         if (state != null && parseStatus(state) != null) {

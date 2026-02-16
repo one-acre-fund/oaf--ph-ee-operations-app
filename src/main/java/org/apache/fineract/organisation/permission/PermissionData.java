@@ -85,7 +85,7 @@ public class PermissionData {
         return new PermissionData(grouping, code, entityName, actionName, selected);
     }
 
-    private PermissionData(final String grouping, final String code, final String entityName, final String actionName,
+    public PermissionData(final String grouping, final String code, final String entityName, final String actionName,
             final Boolean selected) {
         this.grouping = grouping;
         this.code = code;

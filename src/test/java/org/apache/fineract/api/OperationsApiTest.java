@@ -1,11 +1,15 @@
 package org.apache.fineract.api;
 
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.operations.*;
+import org.apache.fineract.organisation.user.AppUser;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,9 +26,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.*;
 
 
 class OperationsApiTest {
@@ -60,9 +62,23 @@ class OperationsApiTest {
     @InjectMocks
     private OperationsApi operationsApi;
 
+    @Mock
+    AppUser connectedUser;
+
+    private MockedStatic<ThreadLocalContextUtil> mockedThreadLocalContext;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        mockedThreadLocalContext = mockStatic(ThreadLocalContextUtil.class);
+        mockedThreadLocalContext.when(ThreadLocalContextUtil::getCurrentUser).thenReturn(connectedUser);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (mockedThreadLocalContext != null) {
+            mockedThreadLocalContext.close();
+        }
     }
 
     // Successfully refunds a completed incoming transfer
@@ -176,7 +192,6 @@ class OperationsApiTest {
         when(taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey)).thenReturn(tasks);
         when(variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey)).thenReturn(variables);
 
-
         TransactionRequestDetail result = operationsApi.transactionRequestDetails(workflowInstanceKey);
 
         assertNotNull(result);
@@ -189,7 +204,6 @@ class OperationsApiTest {
     @Test
     void test_transaction_request_details_invalid_key() {
         Long workflowInstanceKey = 999L;
-
 
         when(transactionRequestRepository.findFirstByWorkflowInstanceKey(workflowInstanceKey)).thenReturn(null);
         when(taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey)).thenReturn(new ArrayList<>());
@@ -226,7 +240,6 @@ class OperationsApiTest {
         when(variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(1L)).thenReturn(variables1);
         when(variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(2L)).thenReturn(variables2);
 
-        // Act
         List<List<Variable>> result = operationsApi.variables(businessKey, businessKeyType);
 
         // Assert
@@ -291,5 +304,4 @@ class OperationsApiTest {
         assertNotNull(result);
         assertTrue(result.isEmpty());
     }
-
 }

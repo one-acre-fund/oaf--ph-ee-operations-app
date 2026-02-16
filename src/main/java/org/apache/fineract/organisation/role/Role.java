@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apache.fineract.config.CustomAuditingEntityListener;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.apache.fineract.organisation.permission.Permission;
+import org.apache.fineract.organisation.permission.PermissionData;
 import org.apache.fineract.organisation.user.AppUser;
 
 import javax.persistence.CascadeType;
@@ -33,7 +34,9 @@ import javax.persistence.JoinColumn;
 import javax.persistence.JoinTable;
 import javax.persistence.ManyToMany;
 import javax.persistence.Table;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Objects;
 
 @Entity
@@ -51,11 +54,12 @@ public class Role extends AbstractPersistableCustom<Long> {
     private Boolean disabled;
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.REFRESH, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.MERGE})
-    private Collection<AppUser> appUsers;
+    @JoinTable(name = "m_appuser_role", joinColumns = @JoinColumn(name = "role_id"), inverseJoinColumns = @JoinColumn(name = "appuser_id"))
+    private Collection<AppUser> appUsers = new ArrayList<>();
 
     @ManyToMany(fetch = FetchType.LAZY, cascade = {CascadeType.REFRESH, CascadeType.DETACH, CascadeType.PERSIST, CascadeType.MERGE})
     @JoinTable(name = "m_role_permission", joinColumns = @JoinColumn(name = "role_id"), inverseJoinColumns = @JoinColumn(name = "permission_id"))
-    private Collection<Permission> permissions;
+    private Collection<Permission> permissions = new ArrayList<>();
 
     public Role() {}
 
@@ -113,4 +117,24 @@ public class Role extends AbstractPersistableCustom<Long> {
     public int hashCode() {
         return Objects.hash(name);
     }
+
+    /**
+     * Checks if the role has a specific permission by its code.
+     *
+     * @param permissionCode the code of the permission to check
+     * @return true if the role has the permission, false otherwise
+     */
+    public boolean hasPermissionTo(final String permissionCode) {
+        boolean match = false;
+        if (this.permissions != null) {
+            for (final Permission permission : this.permissions) {
+                if (permission.hasCode(permissionCode)) {
+                    match = true;
+                    break;
+                }
+            }
+        }
+        return match;
+    }
+
 }

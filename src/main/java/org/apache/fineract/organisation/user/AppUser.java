@@ -21,6 +21,7 @@ package org.apache.fineract.organisation.user;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.ToString;
 import org.apache.fineract.config.CustomAuditingEntityListener;
+import org.apache.fineract.exception.NoAuthorizationException;
 import org.apache.fineract.organisation.office.Office;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.apache.fineract.organisation.permission.Permission;
@@ -332,6 +333,126 @@ public class AppUser extends AbstractPersistableCustom<Long> implements UserDeta
     @Override
     public int hashCode() {
         return Objects.hash(username);
+    }
+
+    /**
+     * Validates whether the user has the given READ permission.
+     *
+     * @param resourceType the resource type
+     * @throws NoAuthorizationException if the user does not have the permission
+     */
+    public void validateHasReadPermission(final String resourceType) {
+        validateHasPermission("READ", resourceType);
+    }
+
+    /**
+     * Validates whether the user has the given CREATE permission.
+     *
+     * @param resourceType the resource type
+     * @throws NoAuthorizationException if the user does not have the permission
+     */
+    public void validateHasCreatePermission(final String resourceType) {
+        validateHasPermission("CREATE", resourceType);
+    }
+
+    /**
+     * Validates whether the user has the given UPDATE permission.
+     *
+     * @param resourceType the resource type
+     * @throws NoAuthorizationException if the user does not have the permission
+     */
+    public void validateHasUpdatePermission(final String resourceType) {
+        validateHasPermission("UPDATE", resourceType);
+    }
+
+    /**
+     * Validates whether the user has the given DELETE permission.
+     *
+     * @param resourceType the resource type
+     * @throws NoAuthorizationException if the user does not have the permission
+     */
+    public void validateHasDeletePermission(final String resourceType) {
+        validateHasPermission("DELETE", resourceType);
+    }
+
+    /**
+     * Validates whether the user has the given EXPORT permission.
+     *
+     * @param resourceType the resource type
+     * @throws NoAuthorizationException if the user does not have the permission
+     */
+    public void validateHasExportPermission(final String resourceType) {
+        validateHasPermission("EXPORT", resourceType);
+    }
+
+    /**
+     * Validates whether the user has the given permission.
+     *
+     * @param resourceType the resource type
+     * @throws NoAuthorizationException if the user does not have the permission
+     */
+    public void validateHasPermission(final String prefix, final String resourceType) {
+        final String authorizationMessage = "User has no authority to " + prefix + " " + resourceType.toLowerCase() + "s";
+        final String matchPermission = prefix + "_" + resourceType.toUpperCase();
+
+        if (!hasNotPermissionForAnyOf("ALL_FUNCTIONS", matchPermission)) {
+            return;
+        }
+
+        throw new NoAuthorizationException(authorizationMessage);
+    }
+
+    /**
+     * Checks if the user lacks all of the specified permissions.
+     *
+     * @param permissionCodes the permission codes to check
+     * @return true if the user lacks all specified permissions, false otherwise
+     */
+    public boolean hasNotPermissionForAnyOf(final String... permissionCodes) {
+        boolean hasNotPermission = true;
+        for (final String permissionCode : permissionCodes) {
+            final boolean checkPermission = hasPermissionTo(permissionCode);
+            if (checkPermission) {
+                hasNotPermission = false;
+                break;
+            }
+        }
+        return hasNotPermission;
+    }
+
+    /**
+     * Checks if the user has the specified permission.
+     *
+     * @param permissionCode the permission code to check
+     * @return true if the user has the permission, false otherwise
+     */
+    private boolean hasPermissionTo(final String permissionCode) {
+        boolean hasPermission = hasAllFunctionsPermission();
+        if (!hasPermission) {
+            for (final Role role : this.roles) {
+                if (role.hasPermissionTo(permissionCode)) {
+                    hasPermission = true;
+                    break;
+                }
+            }
+        }
+        return hasPermission;
+    }
+
+    /**
+     * Checks if the user has the "ALL_FUNCTIONS" permission.
+     *
+     * @return true if the user has the "ALL_FUNCTIONS" permission, false otherwise
+     */
+    private boolean hasAllFunctionsPermission() {
+        boolean match = false;
+        for (final Role role : this.roles) {
+            if (role.hasPermissionTo("ALL_FUNCTIONS")) {
+                match = true;
+                break;
+            }
+        }
+        return match;
     }
 
 }

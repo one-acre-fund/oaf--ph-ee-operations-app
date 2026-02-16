@@ -1,13 +1,16 @@
 package org.apache.fineract.test;
 
 import org.apache.fineract.api.UsersApi;
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.MockedStatic;
 import org.mockito.MockitoAnnotations;
 
 import javax.servlet.http.HttpServletResponse;
@@ -15,8 +18,15 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class UsersApiTest {
 
@@ -26,9 +36,24 @@ class UsersApiTest {
     @InjectMocks
     private UsersApi usersApi;
 
+    @Mock
+    AppUser connectedUser;
+
+    private MockedStatic<ThreadLocalContextUtil> mockedThreadLocalContext;
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+
+        mockedThreadLocalContext = mockStatic(ThreadLocalContextUtil.class);
+        mockedThreadLocalContext.when(ThreadLocalContextUtil::getCurrentUser).thenReturn(connectedUser);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (mockedThreadLocalContext != null) {
+            mockedThreadLocalContext.close();
+        }
     }
 
     @Test

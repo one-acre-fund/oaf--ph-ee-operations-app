@@ -3,18 +3,14 @@ package org.apache.fineract.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.fineract.TestUtils;
+import org.apache.fineract.core.service.ThreadLocalContextUtil;
+import org.apache.fineract.exception.NoAuthorizationException;
 import org.apache.fineract.operations.*;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
 import org.apache.fineract.utils.DateUtil;
-import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.DisplayName;
-import org.junit.jupiter.api.Test;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
-import org.mockito.Mockito;
-import org.mockito.MockitoAnnotations;
+import org.junit.jupiter.api.*;
+import org.mockito.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -60,10 +56,23 @@ class OperationsDetailedApiTest {
 
     private TestUtils testUtils = new TestUtils();
 
+    @Mock
+    AppUser connectedUser;
+
+    private MockedStatic<ThreadLocalContextUtil> mockedThreadLocalContext;
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        mockedThreadLocalContext = mockStatic(ThreadLocalContextUtil.class);
+        mockedThreadLocalContext.when(ThreadLocalContextUtil::getCurrentUser).thenReturn(connectedUser);
+    }
+
+    @AfterEach
+    void tearDown() {
+        if (mockedThreadLocalContext != null) {
+            mockedThreadLocalContext.close();
+        }
     }
 
     @DisplayName("Returns a list of AmsSource objects when amsSourcesString is valid JSON")
@@ -432,6 +441,70 @@ class OperationsDetailedApiTest {
 
         assertNotNull(result);
         verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
+    }
+
+    @DisplayName("Returns page of transaction requests with custom pagination and sorting")
+    @Test
+    void test_transaction_requests_with_custom_pagination_and_sorting() {
+        Integer page = 2;
+        Integer size = 50;
+        String sortedBy = "transactionId";
+        String sortedOrder = "ASC";
+        doNothing().when(connectedUser).validateHasReadPermission("TRANSACTION_REQUEST");
+        TransactionRequest txnRequest = new TransactionRequest();
+        Page<TransactionRequest> expectedPage = new PageImpl<>(Collections.singletonList(txnRequest));
+        when(transactionRequestRepository.findAll(any(Specifications.class), any(PageRequest.class)))
+                .thenReturn(expectedPage);
+        AppUser appUser = new AppUser();
+        appUser.setPayeePartyIdsList(Collections.singletonList("*"));
+        appUser.setCurrenciesList(Collections.singletonList("*"));
+        appUser.setPayeePartyIdTypesList(Collections.singletonList("*"));
+        when(appUserRepository.findAppUserByName(any())).thenReturn(appUser);
+        testUtils.setupSecurityContext(appUser);
+        Page<TransactionRequest> result = operationsDetailedApi.transactionRequests(
+                page, size, null, null, null, null, null, null, null, null, null, null, null, null, null, sortedBy, sortedOrder, sortedOrder
+        );
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+    }
+    @DisplayName("Transaction requests validates read permission")
+    @Test
+    void test_transaction_requests_validates_read_permission() {
+        Integer page = 2;
+        Integer size = 50;
+        String sortedBy = "transactionId";
+        String sortedOrder = "ASC";
+        // Arrange
+        doNothing().when(connectedUser).validateHasReadPermission("TRANSACTION_REQUEST");
+
+        Page<TransactionRequest> emptyPage = new PageImpl<>(Collections.emptyList());
+        when(transactionRequestRepository.findAll(any(Specifications.class), any(PageRequest.class)))
+                .thenReturn(emptyPage);
+
+        AppUser appUser = new AppUser();
+        appUser.setPayeePartyIdsList(Collections.singletonList("*"));
+        appUser.setCurrenciesList(Collections.singletonList("*"));
+        appUser.setPayeePartyIdTypesList(Collections.singletonList("*"));
+        when(appUserRepository.findAppUserByName(any())).thenReturn(appUser);
+        testUtils.setupSecurityContext(appUser);
+        Page<TransactionRequest> result = operationsDetailedApi.transactionRequests(
+                page, size, null, null, null, null, null, null, null, null, null, null, null, null, null, sortedBy, sortedOrder, sortedOrder
+        );
+        verify(connectedUser).validateHasReadPermission("TRANSACTION_REQUEST");
+    }
+    @DisplayName("Transaction requests throws exception when user lacks read permission")
+    @Test
+    void test_transaction_requests_throws_exception_when_no_permission() {
+        doThrow(new NoAuthorizationException("User has no authority to READ transaction_requests"))
+                .when(connectedUser).validateHasReadPermission("TRANSACTION_REQUEST");
+
+        assertThrows(NoAuthorizationException.class, () -> {
+            operationsDetailedApi.transactionRequests(
+                    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null
+            );
+        });
+
+        verify(connectedUser).validateHasReadPermission("TRANSACTION_REQUEST");
     }
 
 }

@@ -1,5 +1,9 @@
 Release Notes
 
+## Version 1.1.10 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * User Management
+            * [CP-3681] - Implement permissions for the PH Ops App backend
 
 ## Version 1.1.9 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs

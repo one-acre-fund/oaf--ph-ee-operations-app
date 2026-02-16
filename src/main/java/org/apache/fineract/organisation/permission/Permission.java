@@ -120,4 +120,15 @@ public class Permission extends AbstractPersistableCustom<Long> {
     public int hashCode() {
         return Objects.hash(code);
     }
+
+    /**
+     * Checks permission by the specified code.
+     *
+     * @param checkCode the code to check against
+     * @return true if the codes match (case-insensitive), false otherwise
+     */
+    public boolean hasCode(final String checkCode) {
+        return this.code.equalsIgnoreCase(checkCode);
+    }
+
 }
