@@ -133,4 +133,118 @@ class UserWithRolesDtoTest {
         assertNull(dto.getId());
         assertNull(dto.getUsername());
     }
+
+    // --- equals() null-branch conditions ---
+
+    @Test
+    @DisplayName("equals returns false when this.id is non-null but other.id is null")
+    void test_equals_this_id_non_null_other_id_null() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(1L, "alice", Collections.emptyList());
+        UserWithRolesDto dto2 = new UserWithRolesDto(null, "alice", Collections.emptyList());
+        assertNotEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("equals returns false when this.id is null but other.id is non-null")
+    void test_equals_this_id_null_other_id_non_null() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(null, "alice", Collections.emptyList());
+        UserWithRolesDto dto2 = new UserWithRolesDto(1L, "alice", Collections.emptyList());
+        assertNotEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("equals returns false when ids match but this.username is non-null and other.username is null")
+    void test_equals_this_username_non_null_other_username_null() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(1L, "alice", Collections.emptyList());
+        UserWithRolesDto dto2 = new UserWithRolesDto(1L, null, Collections.emptyList());
+        assertNotEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("equals returns false when ids match but this.username is null and other.username is non-null")
+    void test_equals_this_username_null_other_username_non_null() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(1L, null, Collections.emptyList());
+        UserWithRolesDto dto2 = new UserWithRolesDto(1L, "alice", Collections.emptyList());
+        assertNotEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("equals returns false when id+username match but this.roles is non-null and other.roles is null")
+    void test_equals_this_roles_non_null_other_roles_null() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(1L, "alice", Arrays.asList("Admin"));
+        UserWithRolesDto dto2 = new UserWithRolesDto(1L, "alice", null);
+        assertNotEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("equals returns false when id+username match but this.roles is null and other.roles is non-null")
+    void test_equals_this_roles_null_other_roles_non_null() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(1L, "alice", null);
+        UserWithRolesDto dto2 = new UserWithRolesDto(1L, "alice", Arrays.asList("Admin"));
+        assertNotEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("equals returns true for two objects where all fields are null")
+    void test_equals_all_fields_null() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(null, null, null);
+        UserWithRolesDto dto2 = new UserWithRolesDto(null, null, null);
+        assertEquals(dto1, dto2);
+    }
+
+    // --- hashCode() null-field conditions ---
+
+    @Test
+    @DisplayName("hashCode is consistent when id is null")
+    void test_hashCode_null_id() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(null, "alice", Arrays.asList("Admin"));
+        UserWithRolesDto dto2 = new UserWithRolesDto(null, "alice", Arrays.asList("Admin"));
+        assertEquals(dto1.hashCode(), dto2.hashCode());
+    }
+
+    @Test
+    @DisplayName("hashCode is consistent when username is null")
+    void test_hashCode_null_username() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(1L, null, Arrays.asList("Admin"));
+        UserWithRolesDto dto2 = new UserWithRolesDto(1L, null, Arrays.asList("Admin"));
+        assertEquals(dto1.hashCode(), dto2.hashCode());
+    }
+
+    @Test
+    @DisplayName("hashCode is consistent when roles is null")
+    void test_hashCode_null_roles() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(1L, "alice", null);
+        UserWithRolesDto dto2 = new UserWithRolesDto(1L, "alice", null);
+        assertEquals(dto1.hashCode(), dto2.hashCode());
+    }
+
+    @Test
+    @DisplayName("hashCode is consistent when all fields are null")
+    void test_hashCode_all_null_fields() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(null, null, null);
+        UserWithRolesDto dto2 = new UserWithRolesDto(null, null, null);
+        assertEquals(dto1.hashCode(), dto2.hashCode());
+    }
+
+    @Test
+    @DisplayName("canEqual returns true for same type")
+    void test_can_equal_same_type() {
+        UserWithRolesDto dto1 = new UserWithRolesDto(1L, "alice", Collections.emptyList());
+        UserWithRolesDto dto2 = new UserWithRolesDto(1L, "alice", Collections.emptyList());
+        assertTrue(dto1.canEqual(dto2));
+    }
+
+    @Test
+    @DisplayName("canEqual returns false for different type")
+    void test_can_equal_different_type() {
+        UserWithRolesDto dto = new UserWithRolesDto(1L, "alice", Collections.emptyList());
+        assertFalse(dto.canEqual("string"));
+    }
+
+    @Test
+    @DisplayName("canEqual returns false for null")
+    void test_can_equal_null() {
+        UserWithRolesDto dto = new UserWithRolesDto(1L, "alice", Collections.emptyList());
+        assertFalse(dto.canEqual(null));
+    }
 }
