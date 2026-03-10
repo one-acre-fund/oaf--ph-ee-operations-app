@@ -2,22 +2,55 @@ package org.apache.fineract.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.fineract.core.service.ThreadLocalContextUtil;
+import org.apache.fineract.exception.NoAuthorizationException;
 import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.role.RoleRepository;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
-import org.junit.jupiter.api.*;
-import org.mockito.*;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockedStatic;
+import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
+import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import java.util.*;
+import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.mockStatic;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class UsersApiTest {
     @Mock
@@ -518,6 +551,142 @@ class UsersApiTest {
         // Assert
         assertNull(result);
         Mockito.verify(mockResponse).setStatus(HttpServletResponse.SC_NOT_FOUND);
+    }
+
+    @DisplayName("retrieveAllUsersWithRolesExcel returns Excel with correct headers and user data")
+    @Test
+    void test_retrieve_all_users_with_roles_excel_success() throws IOException {
+        // Arrange
+        Role adminRole = new Role();
+        adminRole.setName("Admin");
+        Role userRole = new Role();
+        userRole.setName("User");
+
+        AppUser user1 = new AppUser();
+        user1.setId(1L);
+        user1.setUsername("alice");
+        user1.setRoles(Arrays.asList(adminRole, userRole));
+
+        AppUser user2 = new AppUser();
+        user2.setId(2L);
+        user2.setUsername("bob");
+        user2.setRoles(Collections.emptyList());
+
+        when(appuserRepository.findAll()).thenReturn(Arrays.asList(user1, user2));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act
+        usersApi.retrieveAllUsersWithRolesExcel(response);
+
+        // Assert
+        assertEquals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response.getContentType());
+        assertEquals("attachment; filename=users-with-roles.xlsx", response.getHeader("Content-Disposition"));
+
+        byte[] excelBytes = response.getContentAsByteArray();
+        assertTrue(excelBytes.length > 0);
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(excelBytes))) {
+            Sheet sheet = workbook.getSheet("Users");
+            assertNotNull(sheet);
+
+            // Header row
+            Row headerRow = sheet.getRow(0);
+            assertEquals("ID", headerRow.getCell(0).getStringCellValue());
+            assertEquals("Username", headerRow.getCell(1).getStringCellValue());
+            assertEquals("Roles", headerRow.getCell(2).getStringCellValue());
+
+            // First data row
+            Row row1 = sheet.getRow(1);
+            assertEquals(1.0, row1.getCell(0).getNumericCellValue());
+            assertEquals("alice", row1.getCell(1).getStringCellValue());
+            assertEquals("Admin, User", row1.getCell(2).getStringCellValue());
+
+            // Second data row
+            Row row2 = sheet.getRow(2);
+            assertEquals(2.0, row2.getCell(0).getNumericCellValue());
+            assertEquals("bob", row2.getCell(1).getStringCellValue());
+            assertEquals("", row2.getCell(2).getStringCellValue());
+        }
+    }
+
+    @DisplayName("retrieveAllUsersWithRolesExcel returns Excel with only header row when no users exist")
+    @Test
+    void test_retrieve_all_users_with_roles_excel_empty_users() throws IOException {
+        // Arrange
+        when(appuserRepository.findAll()).thenReturn(Collections.emptyList());
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act
+        usersApi.retrieveAllUsersWithRolesExcel(response);
+
+        // Assert
+        assertEquals("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", response.getContentType());
+
+        byte[] excelBytes = response.getContentAsByteArray();
+        assertTrue(excelBytes.length > 0);
+
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(excelBytes))) {
+            Sheet sheet = workbook.getSheet("Users");
+            assertNotNull(sheet);
+            // Only header row should be present
+            assertNotNull(sheet.getRow(0));
+            assertNull(sheet.getRow(1));
+        }
+    }
+
+    @DisplayName("retrieveAllUsersWithRolesExcel handles user with null roles gracefully")
+    @Test
+    void test_retrieve_all_users_with_roles_excel_null_roles() throws IOException {
+        // Arrange
+        AppUser user = new AppUser();
+        user.setId(3L);
+        user.setUsername("charlie");
+        user.setRoles(null);
+
+        when(appuserRepository.findAll()).thenReturn(Collections.singletonList(user));
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act
+        usersApi.retrieveAllUsersWithRolesExcel(response);
+
+        // Assert
+        byte[] excelBytes = response.getContentAsByteArray();
+        try (Workbook workbook = new XSSFWorkbook(new ByteArrayInputStream(excelBytes))) {
+            Sheet sheet = workbook.getSheet("Users");
+            Row row = sheet.getRow(1);
+            assertNotNull(row);
+            assertEquals("charlie", row.getCell(1).getStringCellValue());
+            assertEquals("", row.getCell(2).getStringCellValue());
+        }
+    }
+
+    @DisplayName("retrieveAllUsersWithRolesExcel throws exception when READ_USER permission is missing")
+    @Test
+    void test_retrieve_all_users_with_roles_excel_missing_user_permission() {
+        // Arrange
+        doThrow(new NoAuthorizationException("User has no authority to READ users"))
+                .when(connectedUser).validateHasReadPermission("USER");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act & Assert
+        assertThrows(NoAuthorizationException.class,
+                () -> usersApi.retrieveAllUsersWithRolesExcel(response));
+        verify(appuserRepository, never()).findAll();
+    }
+
+    @DisplayName("retrieveAllUsersWithRolesExcel throws exception when READ_ROLE permission is missing")
+    @Test
+    void test_retrieve_all_users_with_roles_excel_missing_role_permission() {
+        // Arrange
+        doNothing().when(connectedUser).validateHasReadPermission("USER");
+        doThrow(new NoAuthorizationException("User has no authority to READ roles"))
+                .when(connectedUser).validateHasReadPermission("ROLE");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act & Assert
+        assertThrows(NoAuthorizationException.class,
+                () -> usersApi.retrieveAllUsersWithRolesExcel(response));
+        verify(appuserRepository, never()).findAll();
     }
 
 }

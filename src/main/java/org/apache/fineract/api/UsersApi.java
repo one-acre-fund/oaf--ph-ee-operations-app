@@ -29,7 +29,15 @@ import org.apache.fineract.organisation.user.AppUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -56,11 +64,47 @@ public class UsersApi {
     private RoleRepository roleRepository;
 
     private final String resourceNameForPermissions = "USER";
+        private final String resourceNameForRolesPermissions = "ROLE";
 
     @GetMapping(path = "/users", produces = MediaType.APPLICATION_JSON_VALUE)
     public List<AppUser> retrieveAll() {
         ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
         return this.appuserRepository.findAll();
+    }
+
+    /**
+     * Returns all users with their roles as an Excel file. Requires both READ_USERS and READ_ROLES permissions.
+     */
+    @GetMapping(path = "/users-with-roles", produces = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+    public void retrieveAllUsersWithRolesExcel(HttpServletResponse response) throws IOException {
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
+        ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForRolesPermissions);
+
+        List<AppUser> users = this.appuserRepository.findAll();
+
+        // Create Excel workbook
+        org.apache.poi.ss.usermodel.Workbook workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook();
+        org.apache.poi.ss.usermodel.Sheet sheet = workbook.createSheet("Users");
+
+        // Header row
+        org.apache.poi.ss.usermodel.Row header = sheet.createRow(0);
+        header.createCell(0).setCellValue("ID");
+        header.createCell(1).setCellValue("Username");
+        header.createCell(2).setCellValue("Roles");
+
+        int rowIdx = 1;
+        for (AppUser user : users) {
+            org.apache.poi.ss.usermodel.Row row = sheet.createRow(rowIdx++);
+            row.createCell(0).setCellValue(user.getId());
+            row.createCell(1).setCellValue(user.getUsername());
+            String roles = user.getRoles() != null ? user.getRoles().stream().map(Role::getName).collect(java.util.stream.Collectors.joining(", ")) : "";
+            row.createCell(2).setCellValue(roles);
+        }
+
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=users-with-roles.xlsx");
+        workbook.write(response.getOutputStream());
+        workbook.close();
     }
 
     @GetMapping(path = "/user/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
