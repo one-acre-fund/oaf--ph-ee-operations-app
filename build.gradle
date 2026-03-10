@@ -56,7 +56,7 @@ dependencies {
     implementation 'net.sf.supercsv:super-csv:2.4.0'
     implementation 'com.amazonaws:aws-java-sdk:1.11.486'
     implementation 'com.azure:azure-storage-blob:12.12.0'
-    implementation 'commons-io:commons-io:2.4'
+    implementation 'commons-io:commons-io:2.8.0'
     compileOnly 'org.projectlombok:lombok:1.18.24'
     annotationProcessor 'org.projectlombok:lombok:1.18.24'
     implementation "org.springdoc:springdoc-openapi-ui:1.6.11"
@@ -68,10 +68,11 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation("org.keycloak:keycloak-spring-boot-starter:25.0.3")
+    implementation 'org.apache.poi:poi-ooxml:4.1.2'
 }
 
 group = 'org.apache.fineract'
-version = 'v1.1.10'
+version = 'v1.1.11'
 sourceCompatibility = '11'
 
 
