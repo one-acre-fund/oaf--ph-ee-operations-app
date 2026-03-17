@@ -72,10 +72,11 @@ public class UsersApi {
                                      @RequestParam(required = false) Boolean enabled) {
         ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
         Specification<AppUser> spec = Specification.where(null);
-        if (role != null && !role.isEmpty()) {
+        final String normalizedRole = role == null ? null : role.trim();
+        if (normalizedRole != null && !normalizedRole.isEmpty()) {
             spec = spec.and((root, query, cb) -> {
                 query.distinct(true);
-                return cb.equal(root.join("roles").get("name"), role);
+                return cb.equal(root.join("roles").get("name"), normalizedRole);
             });
         }
         if (enabled != null) {
