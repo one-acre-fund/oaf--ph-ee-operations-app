@@ -44,6 +44,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.domain.Specification;
 
 import static java.util.stream.Collectors.toList;
 import static org.apache.fineract.api.AssignmentAction.ASSIGN;
@@ -67,9 +68,21 @@ public class UsersApi {
         private final String resourceNameForRolesPermissions = "ROLE";
 
     @GetMapping(path = "/users", produces = MediaType.APPLICATION_JSON_VALUE)
-    public List<AppUser> retrieveAll() {
+    public List<AppUser> retrieveAll(@RequestParam(required = false) String role,
+                                     @RequestParam(required = false) Boolean enabled) {
         ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
-        return this.appuserRepository.findAll();
+        Specification<AppUser> spec = Specification.where(null);
+        if (role != null && !role.isEmpty()) {
+            spec = spec.and((root, query, cb) -> {
+                query.distinct(true);
+                return cb.equal(root.join("roles").get("name"), role);
+            });
+        }
+        if (enabled != null) {
+            final Boolean enabledVal = enabled;
+            spec = spec.and((root, query, cb) -> cb.equal(root.get("enabled"), enabledVal));
+        }
+        return this.appuserRepository.findAll(spec);
     }
 
     /**

@@ -35,6 +35,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.domain.Specification;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -93,9 +94,9 @@ class UsersApiTest {
         user2.setUsername("user2");
         List<AppUser> users = Arrays.asList(user1, user2);
 
-        when(appuserRepository.findAll()).thenReturn(users);
+        when(appuserRepository.findAll(any(Specification.class))).thenReturn(users);
         // Act
-        List<AppUser> result = usersApi.retrieveAll();
+        List<AppUser> result = usersApi.retrieveAll(null, null);
 
         // Assert
         Assertions.assertEquals(2, result.size());
@@ -107,13 +108,113 @@ class UsersApiTest {
     @Test
     void test_handle_empty_repository() {
         // Arrange
-        when(appuserRepository.findAll()).thenReturn(Collections.emptyList());
+        when(appuserRepository.findAll(any(Specification.class))).thenReturn(Collections.emptyList());
 
         // Act
-        List<AppUser> result = usersApi.retrieveAll();
+        List<AppUser> result = usersApi.retrieveAll(null, null);
 
         // Assert
         Assertions.assertTrue(result.isEmpty());
+    }
+
+    @DisplayName("retrieveAll with role filter returns only users with that role")
+    @Test
+    void test_retrieve_all_filtered_by_role() {
+        // Arrange
+        AppUser admin1 = new AppUser();
+        admin1.setUsername("admin1");
+        AppUser admin2 = new AppUser();
+        admin2.setUsername("admin2");
+        List<AppUser> admins = Arrays.asList(admin1, admin2);
+
+        when(appuserRepository.findAll(any(Specification.class))).thenReturn(admins);
+
+        // Act
+        List<AppUser> result = usersApi.retrieveAll("Admin", null);
+
+        // Assert
+        assertEquals(2, result.size());
+        assertTrue(result.contains(admin1));
+        assertTrue(result.contains(admin2));
+        verify(appuserRepository).findAll(any(Specification.class));
+    }
+
+    @DisplayName("retrieveAll with enabled=true returns only enabled users")
+    @Test
+    void test_retrieve_all_filtered_by_enabled_true() {
+        // Arrange
+        AppUser enabledUser = new AppUser();
+        enabledUser.setUsername("activeUser");
+        enabledUser.setEnabled(true);
+        List<AppUser> enabledUsers = Collections.singletonList(enabledUser);
+
+        when(appuserRepository.findAll(any(Specification.class))).thenReturn(enabledUsers);
+
+        // Act
+        List<AppUser> result = usersApi.retrieveAll(null, true);
+
+        // Assert
+        assertEquals(1, result.size());
+        assertTrue(result.get(0).isEnabled());
+        verify(appuserRepository).findAll(any(Specification.class));
+    }
+
+    @DisplayName("retrieveAll with enabled=false returns only disabled users")
+    @Test
+    void test_retrieve_all_filtered_by_enabled_false() {
+        // Arrange
+        AppUser disabledUser = new AppUser();
+        disabledUser.setUsername("inactiveUser");
+        disabledUser.setEnabled(false);
+        List<AppUser> disabledUsers = Collections.singletonList(disabledUser);
+
+        when(appuserRepository.findAll(any(Specification.class))).thenReturn(disabledUsers);
+
+        // Act
+        List<AppUser> result = usersApi.retrieveAll(null, false);
+
+        // Assert
+        assertEquals(1, result.size());
+        assertFalse(result.get(0).isEnabled());
+        verify(appuserRepository).findAll(any(Specification.class));
+    }
+
+    @DisplayName("retrieveAll with both role and enabled filters returns matching users")
+    @Test
+    void test_retrieve_all_filtered_by_role_and_enabled() {
+        // Arrange
+        AppUser user = new AppUser();
+        user.setUsername("activeAdmin");
+        user.setEnabled(true);
+        List<AppUser> filtered = Collections.singletonList(user);
+
+        when(appuserRepository.findAll(any(Specification.class))).thenReturn(filtered);
+
+        // Act
+        List<AppUser> result = usersApi.retrieveAll("Admin", true);
+
+        // Assert
+        assertEquals(1, result.size());
+        assertEquals("activeAdmin", result.get(0).getUsername());
+        verify(appuserRepository).findAll(any(Specification.class));
+    }
+
+    @DisplayName("retrieveAll with empty role string falls back to no role filter")
+    @Test
+    void test_retrieve_all_empty_role_string_ignored() {
+        // Arrange
+        AppUser user = new AppUser();
+        user.setUsername("someUser");
+        List<AppUser> allUsers = Collections.singletonList(user);
+
+        when(appuserRepository.findAll(any(Specification.class))).thenReturn(allUsers);
+
+        // Act
+        List<AppUser> result = usersApi.retrieveAll("", null);
+
+        // Assert
+        assertEquals(1, result.size());
+        verify(appuserRepository).findAll(any(Specification.class));
     }
 
     @DisplayName("Retrieve an existing user by ID")
