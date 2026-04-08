@@ -174,6 +174,116 @@ class UserPermissionsDtoTest {
         assertNotEquals("not a dto", dto);
     }
 
+    @Test
+    @DisplayName("equals returns true when both objects have null id")
+    void test_equals_both_null_id() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(null, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
+        UserPermissionsDto dto2 = new UserPermissionsDto(null, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
+        assertEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("equals returns false when one id is null and the other is not")
+    void test_equals_one_null_id() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(null, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        assertNotEquals(dto1, dto2);
+        assertNotEquals(dto2, dto1);
+    }
+
+    @Test
+    @DisplayName("equals returns true when both objects have null username")
+    void test_equals_both_null_username() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(ID, null, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
+        UserPermissionsDto dto2 = new UserPermissionsDto(ID, null, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
+        assertEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("equals returns false when one username is null and the other is not")
+    void test_equals_one_null_username() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(ID, null, EMAIL, PERMISSIONS, ROLES);
+        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        assertNotEquals(dto1, dto2);
+        assertNotEquals(dto2, dto1);
+    }
+
+    @Test
+    @DisplayName("equals returns true when both objects have null email")
+    void test_equals_both_null_email() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, null, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
+        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, null, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
+        assertEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("equals returns false when one email is null and the other is not")
+    void test_equals_one_null_email() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, null, PERMISSIONS, ROLES);
+        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        assertNotEquals(dto1, dto2);
+        assertNotEquals(dto2, dto1);
+    }
+
+    @Test
+    @DisplayName("equals returns true when both objects have null permissions")
+    void test_equals_both_null_permissions() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, null, new HashSet<>(ROLES));
+        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, null, new HashSet<>(ROLES));
+        assertEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("equals returns false when one permissions set is null and the other is not")
+    void test_equals_one_null_permissions() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, null, ROLES);
+        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        assertNotEquals(dto1, dto2);
+        assertNotEquals(dto2, dto1);
+    }
+
+    @Test
+    @DisplayName("equals returns true when both objects have null roles")
+    void test_equals_both_null_roles() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), null);
+        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), null);
+        assertEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("equals returns false when one roles set is null and the other is not")
+    void test_equals_one_null_roles() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, null);
+        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        assertNotEquals(dto1, dto2);
+        assertNotEquals(dto2, dto1);
+    }
+
+    @Test
+    @DisplayName("equals returns true when all fields are null in both objects")
+    void test_equals_all_null_fields() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(null, null, null, null, null);
+        UserPermissionsDto dto2 = new UserPermissionsDto(null, null, null, null, null);
+        assertEquals(dto1, dto2);
+    }
+
+    @Test
+    @DisplayName("canEqual returns true for another UserPermissionsDto instance")
+    void test_canEqual_same_type() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        assertTrue(dto1.canEqual(dto2));
+    }
+
+    @Test
+    @DisplayName("canEqual returns false for a non-UserPermissionsDto object")
+    void test_canEqual_different_type() {
+        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        assertFalse(dto.canEqual("some string"));
+        assertFalse(dto.canEqual(42));
+        assertFalse(dto.canEqual(null));
+    }
+
     // ---- hashCode ----
 
     @Test
@@ -201,6 +311,49 @@ class UserPermissionsDtoTest {
         int first = dto.hashCode();
         int second = dto.hashCode();
         assertEquals(first, second);
+    }
+
+    @Test
+    @DisplayName("hashCode does not throw when id is null")
+    void test_hashCode_null_id() {
+        UserPermissionsDto dto = new UserPermissionsDto(null, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        assertDoesNotThrow(dto::hashCode);
+    }
+
+    @Test
+    @DisplayName("hashCode does not throw when username is null")
+    void test_hashCode_null_username() {
+        UserPermissionsDto dto = new UserPermissionsDto(ID, null, EMAIL, PERMISSIONS, ROLES);
+        assertDoesNotThrow(dto::hashCode);
+    }
+
+    @Test
+    @DisplayName("hashCode does not throw when email is null")
+    void test_hashCode_null_email() {
+        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, null, PERMISSIONS, ROLES);
+        assertDoesNotThrow(dto::hashCode);
+    }
+
+    @Test
+    @DisplayName("hashCode does not throw when permissions is null")
+    void test_hashCode_null_permissions() {
+        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, null, ROLES);
+        assertDoesNotThrow(dto::hashCode);
+    }
+
+    @Test
+    @DisplayName("hashCode does not throw when roles is null")
+    void test_hashCode_null_roles() {
+        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, null);
+        assertDoesNotThrow(dto::hashCode);
+    }
+
+    @Test
+    @DisplayName("hashCode is consistent for two objects with all null fields")
+    void test_hashCode_all_null_fields() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(null, null, null, null, null);
+        UserPermissionsDto dto2 = new UserPermissionsDto(null, null, null, null, null);
+        assertEquals(dto1.hashCode(), dto2.hashCode());
     }
 
     // ---- toString ----
