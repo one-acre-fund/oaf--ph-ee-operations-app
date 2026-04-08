@@ -3,10 +3,12 @@ package org.apache.fineract.api;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.exception.NoAuthorizationException;
+import org.apache.fineract.organisation.permission.Permission;
 import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.role.RoleRepository;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
+import org.apache.fineract.organisation.user.UserPermissionsDto;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -35,6 +37,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.data.jpa.domain.Specification;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -788,6 +791,217 @@ class UsersApiTest {
         assertThrows(NoAuthorizationException.class,
                 () -> usersApi.retrieveAllUsersWithRolesExcel(response));
         verify(appuserRepository, never()).findAll();
+    }
+
+
+    @DisplayName("retrieveUserPermissionsByUsername returns permissions when user fetches their own profile by email")
+    @Test
+    void test_retrieve_permissions_by_own_email_skips_permission_check() {
+        // Arrange
+        String email = "kelvin.thuku@oneacrefund.org";
+        when(connectedUser.getEmail()).thenReturn(email);
+
+        Permission perm = new Permission();
+        perm.setCode("READ_TRANSACTION");
+
+        Role role = new Role();
+        role.setName("Operator");
+        role.setDisabled(false);
+        role.setPermissions(Collections.singletonList(perm));
+
+        AppUser user = new AppUser();
+        user.setId(10L);
+        user.setUsername("kelvin.thuku");
+        user.setEmail(email);
+        user.setRoles(Collections.singletonList(role));
+
+        when(appuserRepository.findAppUserByName(email)).thenReturn(user);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act
+        UserPermissionsDto dto = usersApi.retrieveUserPermissionsByUsername(email, response);
+
+        // Assert
+        assertNotNull(dto);
+        assertEquals(Long.valueOf(10L), dto.getId());
+        assertEquals("kelvin.thuku", dto.getUsername());
+        assertEquals(email, dto.getEmail());
+        assertEquals(Set.of("READ_TRANSACTION"), dto.getPermissions());
+        assertEquals(Set.of("Operator"), dto.getRoles());
+        verify(connectedUser, never()).validateHasReadPermission("USER");
+    }
+
+    @DisplayName("retrieveUserPermissionsByUsername requires READ_USER permission when fetching another user's profile")
+    @Test
+    void test_retrieve_permissions_for_other_user_requires_permission() {
+        // Arrange
+        when(connectedUser.getEmail()).thenReturn("admin@oneacrefund.org");
+        doNothing().when(connectedUser).validateHasReadPermission("USER");
+
+        Permission perm = new Permission();
+        perm.setCode("READ_TRANSACTION");
+
+        Role role = new Role();
+        role.setName("Viewer");
+        role.setDisabled(false);
+        role.setPermissions(Collections.singletonList(perm));
+
+        AppUser user = new AppUser();
+        user.setId(5L);
+        user.setUsername("other.user");
+        user.setEmail("other.user@oneacrefund.org");
+        user.setRoles(Collections.singletonList(role));
+
+        when(appuserRepository.findAppUserByName("other.user@oneacrefund.org")).thenReturn(user);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act
+        UserPermissionsDto dto = usersApi.retrieveUserPermissionsByUsername("other.user@oneacrefund.org", response);
+
+        // Assert
+        assertNotNull(dto);
+        verify(connectedUser, times(1)).validateHasReadPermission("USER");
+    }
+
+    @DisplayName("retrieveUserPermissionsByUsername throws NoAuthorizationException when caller lacks READ_USER permission")
+    @Test
+    void test_retrieve_permissions_for_other_user_throws_when_unauthorized() {
+        // Arrange
+        when(connectedUser.getEmail()).thenReturn("admin@oneacrefund.org");
+        doThrow(new NoAuthorizationException("No READ_USER permission"))
+                .when(connectedUser).validateHasReadPermission("USER");
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act & Assert
+        assertThrows(NoAuthorizationException.class,
+                () -> usersApi.retrieveUserPermissionsByUsername("other.user@oneacrefund.org", response));
+        verify(appuserRepository, never()).findAppUserByName(any());
+    }
+
+    @DisplayName("retrieveUserPermissionsByUsername returns 404 when username is not found")
+    @Test
+    void test_retrieve_permissions_user_not_found() {
+        // Arrange
+        String email = "unknown@oneacrefund.org";
+        when(connectedUser.getEmail()).thenReturn(email);
+        when(appuserRepository.findAppUserByName(email)).thenReturn(null);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act
+        UserPermissionsDto dto = usersApi.retrieveUserPermissionsByUsername(email, response);
+
+        // Assert
+        assertNull(dto);
+        assertEquals(HttpServletResponse.SC_NOT_FOUND, response.getStatus());
+    }
+
+    @DisplayName("retrieveUserPermissionsByUsername deduplicates permissions shared across multiple active roles")
+    @Test
+    void test_retrieve_permissions_deduplicates_across_roles() {
+        // Arrange
+        String email = "kelvin.thuku@oneacrefund.org";
+        when(connectedUser.getEmail()).thenReturn(email);
+
+        Permission sharedPerm = new Permission();
+        sharedPerm.setCode("READ_TRANSACTION");
+        Permission uniquePerm = new Permission();
+        uniquePerm.setCode("WRITE_TRANSACTION");
+
+        Role role1 = new Role();
+        role1.setName("Operator");
+        role1.setDisabled(false);
+        role1.setPermissions(Arrays.asList(sharedPerm, uniquePerm));
+
+        Role role2 = new Role();
+        role2.setName("Viewer");
+        role2.setDisabled(false);
+        role2.setPermissions(Collections.singletonList(sharedPerm));
+
+        AppUser user = new AppUser();
+        user.setId(1L);
+        user.setUsername("kelvin.thuku");
+        user.setEmail(email);
+        user.setRoles(Arrays.asList(role1, role2));
+
+        when(appuserRepository.findAppUserByName(email)).thenReturn(user);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act
+        UserPermissionsDto dto = usersApi.retrieveUserPermissionsByUsername(email, response);
+
+        // Assert
+        assertNotNull(dto);
+        assertEquals(2, dto.getPermissions().size(), "READ_TRANSACTION should appear only once");
+        assertTrue(dto.getPermissions().contains("READ_TRANSACTION"));
+        assertTrue(dto.getPermissions().contains("WRITE_TRANSACTION"));
+        assertEquals(Set.of("Operator", "Viewer"), dto.getRoles());
+    }
+
+    @DisplayName("retrieveUserPermissionsByUsername excludes permissions from disabled roles")
+    @Test
+    void test_retrieve_permissions_excludes_disabled_roles() {
+        // Arrange
+        String email = "kelvin.thuku@oneacrefund.org";
+        when(connectedUser.getEmail()).thenReturn(email);
+
+        Permission activePerm = new Permission();
+        activePerm.setCode("READ_TRANSACTION");
+        Permission disabledPerm = new Permission();
+        disabledPerm.setCode("ADMIN_ACCESS");
+
+        Role activeRole = new Role();
+        activeRole.setName("Operator");
+        activeRole.setDisabled(false);
+        activeRole.setPermissions(Collections.singletonList(activePerm));
+
+        Role disabledRole = new Role();
+        disabledRole.setName("SuperAdmin");
+        disabledRole.setDisabled(true);
+        disabledRole.setPermissions(Collections.singletonList(disabledPerm));
+
+        AppUser user = new AppUser();
+        user.setId(1L);
+        user.setUsername("kelvin.thuku");
+        user.setEmail(email);
+        user.setRoles(Arrays.asList(activeRole, disabledRole));
+
+        when(appuserRepository.findAppUserByName(email)).thenReturn(user);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act
+        UserPermissionsDto dto = usersApi.retrieveUserPermissionsByUsername(email, response);
+
+        // Assert
+        assertNotNull(dto);
+        assertEquals(Set.of("READ_TRANSACTION"), dto.getPermissions());
+        assertEquals(Set.of("Operator"), dto.getRoles());
+        assertFalse(dto.getPermissions().contains("ADMIN_ACCESS"));
+    }
+
+    @DisplayName("retrieveUserPermissionsByUsername returns empty permissions and roles when user has no roles")
+    @Test
+    void test_retrieve_permissions_user_with_no_roles() {
+        // Arrange
+        String email = "kelvin.thuku@oneacrefund.org";
+        when(connectedUser.getEmail()).thenReturn(email);
+
+        AppUser user = new AppUser();
+        user.setId(1L);
+        user.setUsername("kelvin.thuku");
+        user.setEmail(email);
+        user.setRoles(Collections.emptyList());
+
+        when(appuserRepository.findAppUserByName(email)).thenReturn(user);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act
+        UserPermissionsDto dto = usersApi.retrieveUserPermissionsByUsername(email, response);
+
+        // Assert
+        assertNotNull(dto);
+        assertTrue(dto.getPermissions().isEmpty());
+        assertTrue(dto.getRoles().isEmpty());
     }
 
 }

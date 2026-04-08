@@ -1,5 +1,10 @@
 Release Notes
 
+## Version 1.1.13 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * User Management
+            * [CP-4069] - Add API to fetch user details by username
+
 ## Version 1.1.12 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * User Management
