@@ -3,420 +3,308 @@ package org.apache.fineract.organisation.user;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UserPermissionsDtoTest {
 
-    private static final Long ID = 1L;
-    private static final String USERNAME = "kelvin.thuku";
-    private static final String EMAIL = "kelvin.thuku@oneacrefund.org";
-    private static final Set<String> PERMISSIONS = new LinkedHashSet<>(Arrays.asList("READ_TRANSACTION", "WRITE_TRANSACTION"));
-    private static final Set<String> ROLES = new LinkedHashSet<>(Arrays.asList("Operator", "Viewer"));
-
-    // ---- Constructor & getters ----
-
+    @DisplayName("all-args constructor sets appUser, permissions, and roles")
     @Test
-    @DisplayName("All-args constructor sets all fields correctly")
     void test_all_args_constructor() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        AppUser appUser = new AppUser();
+        appUser.setUsername("kelvin.thuku");
+        Set<String> permissions = new LinkedHashSet<>(Set.of("READ_TRANSACTION", "WRITE_TRANSACTION"));
+        Set<String> roles = new LinkedHashSet<>(Set.of("Operator", "Viewer"));
 
-        assertEquals(ID, dto.getId());
-        assertEquals(USERNAME, dto.getUsername());
-        assertEquals(EMAIL, dto.getEmail());
-        assertEquals(PERMISSIONS, dto.getPermissions());
-        assertEquals(ROLES, dto.getRoles());
+        UserPermissionsDto dto = new UserPermissionsDto(appUser, permissions, roles);
+
+        assertEquals(appUser, dto.getAppUser());
+        assertEquals(permissions, dto.getPermissions());
+        assertEquals(roles, dto.getRoles());
     }
 
+    @DisplayName("setters update all fields")
     @Test
-    @DisplayName("Constructor with null permissions and roles stores nulls")
-    void test_constructor_null_collections() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, null, null);
-
-        assertNull(dto.getPermissions());
-        assertNull(dto.getRoles());
-    }
-
-    @Test
-    @DisplayName("Constructor with null id, username, and email stores nulls")
-    void test_constructor_null_scalar_fields() {
-        UserPermissionsDto dto = new UserPermissionsDto(null, null, null, PERMISSIONS, ROLES);
-
-        assertNull(dto.getId());
-        assertNull(dto.getUsername());
-        assertNull(dto.getEmail());
-    }
-
-    @Test
-    @DisplayName("Constructor with empty permissions and roles sets empty sets")
-    void test_constructor_empty_collections() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, Collections.emptySet(), Collections.emptySet());
-
-        assertNotNull(dto.getPermissions());
-        assertTrue(dto.getPermissions().isEmpty());
-        assertNotNull(dto.getRoles());
-        assertTrue(dto.getRoles().isEmpty());
-    }
-
-    // ---- Setters ----
-
-    @Test
-    @DisplayName("Setters update all fields correctly")
     void test_setters() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
+        UserPermissionsDto dto = new UserPermissionsDto(null, null, null);
+        AppUser appUser = new AppUser();
+        appUser.setUsername("new.user");
+        Set<String> permissions = new LinkedHashSet<>(Set.of("ADMIN_ACCESS"));
+        Set<String> roles = new LinkedHashSet<>(Set.of("SuperAdmin"));
 
-        Set<String> newPermissions = new HashSet<>(Collections.singletonList("ADMIN_ACCESS"));
-        Set<String> newRoles = new HashSet<>(Collections.singletonList("SuperAdmin"));
+        dto.setAppUser(appUser);
+        dto.setPermissions(permissions);
+        dto.setRoles(roles);
 
-        dto.setId(99L);
-        dto.setUsername("new.user");
-        dto.setEmail("new.user@oneacrefund.org");
-        dto.setPermissions(newPermissions);
-        dto.setRoles(newRoles);
-
-        assertEquals(Long.valueOf(99), dto.getId());
-        assertEquals("new.user", dto.getUsername());
-        assertEquals("new.user@oneacrefund.org", dto.getEmail());
-        assertEquals(newPermissions, dto.getPermissions());
-        assertEquals(newRoles, dto.getRoles());
+        assertEquals(appUser, dto.getAppUser());
+        assertEquals(permissions, dto.getPermissions());
+        assertEquals(roles, dto.getRoles());
     }
 
+    @DisplayName("dto allows null values")
     @Test
-    @DisplayName("Setter can clear permissions to null")
-    void test_setter_clears_permissions_to_null() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        dto.setPermissions(null);
+    void test_null_values() {
+        UserPermissionsDto dto = new UserPermissionsDto(null, null, null);
+
+        assertNull(dto.getAppUser());
         assertNull(dto.getPermissions());
-    }
-
-    @Test
-    @DisplayName("Setter can clear roles to null")
-    void test_setter_clears_roles_to_null() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        dto.setRoles(null);
         assertNull(dto.getRoles());
     }
 
-    // ---- equals ----
-
+    @DisplayName("equals and hashCode match for equivalent DTOs")
     @Test
-    @DisplayName("equals returns true for two objects with the same field values")
-    void test_equals_same_values() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
+    void test_equals_and_hash_code() {
+        AppUser appUser = new AppUser();
+        appUser.setUsername("same.user");
+        Set<String> permissions = new LinkedHashSet<>(Set.of("READ_TRANSACTION"));
+        Set<String> roles = new LinkedHashSet<>(Set.of("Viewer"));
+
+        UserPermissionsDto dto1 = new UserPermissionsDto(appUser, permissions, roles);
+        UserPermissionsDto dto2 = new UserPermissionsDto(appUser, new LinkedHashSet<>(permissions), new LinkedHashSet<>(roles));
 
         assertEquals(dto1, dto2);
+        assertEquals(dto1.hashCode(), dto2.hashCode());
     }
 
+    // Additional comprehensive @Data coverage tests
+
+    @DisplayName("getters return correct values")
     @Test
-    @DisplayName("equals returns true for same instance")
-    void test_equals_same_instance() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
+    void test_getters() {
+        AppUser appUser = new AppUser();
+        appUser.setUsername("test.user");
+        Set<String> permissions = new LinkedHashSet<>(Set.of("READ_TRANSACTION", "WRITE_TRANSACTION"));
+        Set<String> roles = new LinkedHashSet<>(Set.of("Operator"));
+
+        UserPermissionsDto dto = new UserPermissionsDto(appUser, permissions, roles);
+
+        assertEquals(appUser, dto.getAppUser());
+        assertEquals(permissions, dto.getPermissions());
+        assertEquals(roles, dto.getRoles());
+    }
+
+    @DisplayName("toString includes all field information")
+    @Test
+    void test_toString() {
+        AppUser appUser = new AppUser();
+        appUser.setUsername("test.user");
+        Set<String> permissions = new LinkedHashSet<>(Set.of("READ_TRANSACTION"));
+        Set<String> roles = new LinkedHashSet<>(Set.of("Operator"));
+
+        UserPermissionsDto dto = new UserPermissionsDto(appUser, permissions, roles);
+
+        String toString = dto.toString();
+        assertNotNull(toString);
+        assertTrue(toString.contains("UserPermissionsDto"));
+        assertTrue(toString.contains("appUser"));
+        assertTrue(toString.contains("permissions"));
+        assertTrue(toString.contains("roles"));
+    }
+
+    @DisplayName("toString handles null fields gracefully")
+    @Test
+    void test_toString_with_nulls() {
+        UserPermissionsDto dto = new UserPermissionsDto(null, null, null);
+
+        String toString = dto.toString();
+        assertNotNull(toString);
+        assertTrue(toString.contains("UserPermissionsDto"));
+        assertTrue(toString.contains("null"));
+    }
+
+    @DisplayName("equals returns false for null object")
+    @Test
+    void test_equals_with_null() {
+        AppUser appUser = new AppUser();
+        UserPermissionsDto dto = new UserPermissionsDto(appUser, Set.of(), Set.of());
+
+        assertNotEquals(dto, null);
+    }
+
+    @DisplayName("equals returns false for different class")
+    @Test
+    void test_equals_with_different_class() {
+        AppUser appUser = new AppUser();
+        UserPermissionsDto dto = new UserPermissionsDto(appUser, Set.of(), Set.of());
+
+        assertNotEquals(dto, "not a UserPermissionsDto");
+    }
+
+    @DisplayName("equals returns true for same object reference")
+    @Test
+    void test_equals_same_reference() {
+        AppUser appUser = new AppUser();
+        UserPermissionsDto dto = new UserPermissionsDto(appUser, Set.of(), Set.of());
+
         assertEquals(dto, dto);
     }
 
+    @DisplayName("equals returns false when appUser differs")
     @Test
-    @DisplayName("equals returns false for different id")
-    void test_equals_different_id() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(1L, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        UserPermissionsDto dto2 = new UserPermissionsDto(2L, USERNAME, EMAIL, PERMISSIONS, ROLES);
+    void test_equals_different_app_user() {
+        AppUser appUser1 = new AppUser();
+        appUser1.setUsername("user1");
+        AppUser appUser2 = new AppUser();
+        appUser2.setUsername("user2");
+        Set<String> permissions = Set.of("READ_TRANSACTION");
+        Set<String> roles = Set.of("Operator");
+
+        UserPermissionsDto dto1 = new UserPermissionsDto(appUser1, permissions, roles);
+        UserPermissionsDto dto2 = new UserPermissionsDto(appUser2, permissions, roles);
+
         assertNotEquals(dto1, dto2);
-    }
-
-    @Test
-    @DisplayName("equals returns false for different username")
-    void test_equals_different_username() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, "alice", EMAIL, PERMISSIONS, ROLES);
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, "bob", EMAIL, PERMISSIONS, ROLES);
-        assertNotEquals(dto1, dto2);
-    }
-
-    @Test
-    @DisplayName("equals returns false for different email")
-    void test_equals_different_email() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, "a@example.com", PERMISSIONS, ROLES);
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, "b@example.com", PERMISSIONS, ROLES);
-        assertNotEquals(dto1, dto2);
-    }
-
-    @Test
-    @DisplayName("equals returns false for different permissions")
-    void test_equals_different_permissions() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, new HashSet<>(Collections.singletonList("READ_TRANSACTION")), ROLES);
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, new HashSet<>(Collections.singletonList("WRITE_TRANSACTION")), ROLES);
-        assertNotEquals(dto1, dto2);
-    }
-
-    @Test
-    @DisplayName("equals returns false for different roles")
-    void test_equals_different_roles() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, new HashSet<>(Collections.singletonList("Operator")));
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, new HashSet<>(Collections.singletonList("Viewer")));
-        assertNotEquals(dto1, dto2);
-    }
-
-    @Test
-    @DisplayName("equals returns false when compared to null")
-    void test_equals_null() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        assertNotEquals(null, dto);
-    }
-
-    @Test
-    @DisplayName("equals returns false when compared to a different type")
-    void test_equals_different_type() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        assertNotEquals("not a dto", dto);
-    }
-
-    @Test
-    @DisplayName("equals returns true when both objects have null id")
-    void test_equals_both_null_id() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(null, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
-        UserPermissionsDto dto2 = new UserPermissionsDto(null, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
-        assertEquals(dto1, dto2);
-    }
-
-    @Test
-    @DisplayName("equals returns false when one id is null and the other is not")
-    void test_equals_one_null_id() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(null, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        assertNotEquals(dto1, dto2);
-        assertNotEquals(dto2, dto1);
-    }
-
-    @Test
-    @DisplayName("equals returns true when both objects have null username")
-    void test_equals_both_null_username() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, null, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, null, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
-        assertEquals(dto1, dto2);
-    }
-
-    @Test
-    @DisplayName("equals returns false when one username is null and the other is not")
-    void test_equals_one_null_username() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, null, EMAIL, PERMISSIONS, ROLES);
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        assertNotEquals(dto1, dto2);
-        assertNotEquals(dto2, dto1);
-    }
-
-    @Test
-    @DisplayName("equals returns true when both objects have null email")
-    void test_equals_both_null_email() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, null, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, null, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
-        assertEquals(dto1, dto2);
-    }
-
-    @Test
-    @DisplayName("equals returns false when one email is null and the other is not")
-    void test_equals_one_null_email() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, null, PERMISSIONS, ROLES);
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        assertNotEquals(dto1, dto2);
-        assertNotEquals(dto2, dto1);
-    }
-
-    @Test
-    @DisplayName("equals returns true when both objects have null permissions")
-    void test_equals_both_null_permissions() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, null, new HashSet<>(ROLES));
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, null, new HashSet<>(ROLES));
-        assertEquals(dto1, dto2);
-    }
-
-    @Test
-    @DisplayName("equals returns false when one permissions set is null and the other is not")
-    void test_equals_one_null_permissions() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, null, ROLES);
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        assertNotEquals(dto1, dto2);
-        assertNotEquals(dto2, dto1);
-    }
-
-    @Test
-    @DisplayName("equals returns true when both objects have null roles")
-    void test_equals_both_null_roles() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), null);
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), null);
-        assertEquals(dto1, dto2);
-    }
-
-    @Test
-    @DisplayName("equals returns false when one roles set is null and the other is not")
-    void test_equals_one_null_roles() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, null);
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        assertNotEquals(dto1, dto2);
-        assertNotEquals(dto2, dto1);
-    }
-
-    @Test
-    @DisplayName("equals returns true when all fields are null in both objects")
-    void test_equals_all_null_fields() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(null, null, null, null, null);
-        UserPermissionsDto dto2 = new UserPermissionsDto(null, null, null, null, null);
-        assertEquals(dto1, dto2);
-    }
-
-    @Test
-    @DisplayName("canEqual returns true for another UserPermissionsDto instance")
-    void test_canEqual_same_type() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        assertTrue(dto1.canEqual(dto2));
-    }
-
-    @Test
-    @DisplayName("canEqual returns false for a non-UserPermissionsDto object")
-    void test_canEqual_different_type() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        assertFalse(dto.canEqual("some string"));
-        assertFalse(dto.canEqual(42));
-        assertFalse(dto.canEqual(null));
-    }
-
-    // ---- hashCode ----
-
-    @Test
-    @DisplayName("hashCode is equal for two objects with the same field values")
-    void test_hashCode_same_values() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(ID, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
-        UserPermissionsDto dto2 = new UserPermissionsDto(ID, USERNAME, EMAIL, new HashSet<>(PERMISSIONS), new HashSet<>(ROLES));
-
-        assertEquals(dto1.hashCode(), dto2.hashCode());
-    }
-
-    @Test
-    @DisplayName("hashCode differs for objects with different field values")
-    void test_hashCode_different_values() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(1L, "alice", "a@example.com", PERMISSIONS, ROLES);
-        UserPermissionsDto dto2 = new UserPermissionsDto(2L, "bob", "b@example.com", PERMISSIONS, ROLES);
-
         assertNotEquals(dto1.hashCode(), dto2.hashCode());
     }
 
+    @DisplayName("equals returns false when permissions differ")
     @Test
-    @DisplayName("hashCode is consistent across multiple calls on the same object")
-    void test_hashCode_consistency() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        int first = dto.hashCode();
-        int second = dto.hashCode();
-        assertEquals(first, second);
+    void test_equals_different_permissions() {
+        AppUser appUser = new AppUser();
+        appUser.setUsername("user");
+        Set<String> permissions1 = Set.of("READ_TRANSACTION");
+        Set<String> permissions2 = Set.of("WRITE_TRANSACTION");
+        Set<String> roles = Set.of("Operator");
+
+        UserPermissionsDto dto1 = new UserPermissionsDto(appUser, permissions1, roles);
+        UserPermissionsDto dto2 = new UserPermissionsDto(appUser, permissions2, roles);
+
+        assertNotEquals(dto1, dto2);
+        assertNotEquals(dto1.hashCode(), dto2.hashCode());
     }
 
+    @DisplayName("equals returns false when roles differ")
     @Test
-    @DisplayName("hashCode does not throw when id is null")
-    void test_hashCode_null_id() {
-        UserPermissionsDto dto = new UserPermissionsDto(null, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        assertDoesNotThrow(dto::hashCode);
+    void test_equals_different_roles() {
+        AppUser appUser = new AppUser();
+        appUser.setUsername("user");
+        Set<String> permissions = Set.of("READ_TRANSACTION");
+        Set<String> roles1 = Set.of("Operator");
+        Set<String> roles2 = Set.of("Viewer");
+
+        UserPermissionsDto dto1 = new UserPermissionsDto(appUser, permissions, roles1);
+        UserPermissionsDto dto2 = new UserPermissionsDto(appUser, permissions, roles2);
+
+        assertNotEquals(dto1, dto2);
+        assertNotEquals(dto1.hashCode(), dto2.hashCode());
     }
 
+    @DisplayName("equals handles null appUser correctly")
     @Test
-    @DisplayName("hashCode does not throw when username is null")
-    void test_hashCode_null_username() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, null, EMAIL, PERMISSIONS, ROLES);
-        assertDoesNotThrow(dto::hashCode);
+    void test_equals_with_null_app_user() {
+        Set<String> permissions = Set.of("READ_TRANSACTION");
+        Set<String> roles = Set.of("Operator");
+
+        UserPermissionsDto dto1 = new UserPermissionsDto(null, permissions, roles);
+        UserPermissionsDto dto2 = new UserPermissionsDto(null, permissions, roles);
+        AppUser appUser = new AppUser();
+        UserPermissionsDto dto3 = new UserPermissionsDto(appUser, permissions, roles);
+
+        assertEquals(dto1, dto2);
+        assertEquals(dto1.hashCode(), dto2.hashCode());
+        assertNotEquals(dto1, dto3);
     }
 
+    @DisplayName("equals handles null permissions correctly")
     @Test
-    @DisplayName("hashCode does not throw when email is null")
-    void test_hashCode_null_email() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, null, PERMISSIONS, ROLES);
-        assertDoesNotThrow(dto::hashCode);
+    void test_equals_with_null_permissions() {
+        AppUser appUser = new AppUser();
+        appUser.setUsername("user");
+        Set<String> roles = Set.of("Operator");
+
+        UserPermissionsDto dto1 = new UserPermissionsDto(appUser, null, roles);
+        UserPermissionsDto dto2 = new UserPermissionsDto(appUser, null, roles);
+        UserPermissionsDto dto3 = new UserPermissionsDto(appUser, Set.of("READ_TRANSACTION"), roles);
+
+        assertEquals(dto1, dto2);
+        assertEquals(dto1.hashCode(), dto2.hashCode());
+        assertNotEquals(dto1, dto3);
     }
 
+    @DisplayName("equals handles null roles correctly")
     @Test
-    @DisplayName("hashCode does not throw when permissions is null")
-    void test_hashCode_null_permissions() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, null, ROLES);
-        assertDoesNotThrow(dto::hashCode);
+    void test_equals_with_null_roles() {
+        AppUser appUser = new AppUser();
+        appUser.setUsername("user");
+        Set<String> permissions = Set.of("READ_TRANSACTION");
+
+        UserPermissionsDto dto1 = new UserPermissionsDto(appUser, permissions, null);
+        UserPermissionsDto dto2 = new UserPermissionsDto(appUser, permissions, null);
+        UserPermissionsDto dto3 = new UserPermissionsDto(appUser, permissions, Set.of("Operator"));
+
+        assertEquals(dto1, dto2);
+        assertEquals(dto1.hashCode(), dto2.hashCode());
+        assertNotEquals(dto1, dto3);
     }
 
+    @DisplayName("equals handles all null fields correctly")
     @Test
-    @DisplayName("hashCode does not throw when roles is null")
-    void test_hashCode_null_roles() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, null);
-        assertDoesNotThrow(dto::hashCode);
-    }
+    void test_equals_all_null_fields() {
+        UserPermissionsDto dto1 = new UserPermissionsDto(null, null, null);
+        UserPermissionsDto dto2 = new UserPermissionsDto(null, null, null);
 
-    @Test
-    @DisplayName("hashCode is consistent for two objects with all null fields")
-    void test_hashCode_all_null_fields() {
-        UserPermissionsDto dto1 = new UserPermissionsDto(null, null, null, null, null);
-        UserPermissionsDto dto2 = new UserPermissionsDto(null, null, null, null, null);
+        assertEquals(dto1, dto2);
         assertEquals(dto1.hashCode(), dto2.hashCode());
     }
 
-    // ---- toString ----
-
+    @DisplayName("hashCode is consistent across multiple calls")
     @Test
-    @DisplayName("toString contains all field values")
-    void test_toString_contains_all_fields() {
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, ROLES);
-        String result = dto.toString();
+    void test_hashcode_consistency() {
+        AppUser appUser = new AppUser();
+        appUser.setUsername("user");
+        Set<String> permissions = Set.of("READ_TRANSACTION");
+        Set<String> roles = Set.of("Operator");
 
-        assertTrue(result.contains(ID.toString()));
-        assertTrue(result.contains(USERNAME));
-        assertTrue(result.contains(EMAIL));
-        assertTrue(result.contains("READ_TRANSACTION"));
-        assertTrue(result.contains("WRITE_TRANSACTION"));
-        assertTrue(result.contains("Operator"));
-        assertTrue(result.contains("Viewer"));
+        UserPermissionsDto dto = new UserPermissionsDto(appUser, permissions, roles);
+
+        int hash1 = dto.hashCode();
+        int hash2 = dto.hashCode();
+        int hash3 = dto.hashCode();
+
+        assertEquals(hash1, hash2);
+        assertEquals(hash2, hash3);
     }
 
+    @DisplayName("setting fields via setters maintains equals contract")
     @Test
-    @DisplayName("toString handles null fields without throwing")
-    void test_toString_with_nulls() {
-        UserPermissionsDto dto = new UserPermissionsDto(null, null, null, null, null);
-        assertDoesNotThrow(dto::toString);
-        String result = dto.toString();
-        assertNotNull(result);
+    void test_equals_after_setter_modifications() {
+        AppUser appUser1 = new AppUser();
+        appUser1.setUsername("user1");
+        AppUser appUser2 = new AppUser();
+        appUser2.setUsername("user1");  // Same username
+        
+        UserPermissionsDto dto1 = new UserPermissionsDto(appUser1, Set.of(), Set.of());
+        UserPermissionsDto dto2 = new UserPermissionsDto(null, null, null);
+        
+        // Initially different
+        assertNotEquals(dto1, dto2);
+        
+        // Set dto2 to match dto1
+        dto2.setAppUser(appUser2);
+        dto2.setPermissions(Set.of());
+        dto2.setRoles(Set.of());
+        
+        // Now they should be equal (assuming AppUser.equals works properly)
+        // Note: This test assumes AppUser has proper equals implementation
+        assertEquals(dto1, dto2);
+        assertEquals(dto1.hashCode(), dto2.hashCode());
     }
 
-    // ---- Collection integrity ----
-
+    @DisplayName("empty collections are handled correctly in equals")
     @Test
-    @DisplayName("Permissions set returned is the same reference stored")
-    void test_permissions_set_reference() {
-        Set<String> permissions = new LinkedHashSet<>(Arrays.asList("READ_TRANSACTION"));
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, permissions, ROLES);
-        assertSame(permissions, dto.getPermissions());
-    }
+    void test_equals_with_empty_collections() {
+        AppUser appUser = new AppUser();
+        appUser.setUsername("user");
 
-    @Test
-    @DisplayName("Roles set returned is the same reference stored")
-    void test_roles_set_reference() {
-        Set<String> roles = new LinkedHashSet<>(Arrays.asList("Operator"));
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, PERMISSIONS, roles);
-        assertSame(roles, dto.getRoles());
-    }
+        UserPermissionsDto dto1 = new UserPermissionsDto(appUser, Set.of(), Set.of());
+        UserPermissionsDto dto2 = new UserPermissionsDto(appUser, new LinkedHashSet<>(), new LinkedHashSet<>());
 
-    @Test
-    @DisplayName("Permissions set with a single entry is stored correctly")
-    void test_single_permission() {
-        Set<String> single = new HashSet<>(Collections.singletonList("READ_TRANSACTION"));
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, single, Collections.emptySet());
-
-        assertEquals(1, dto.getPermissions().size());
-        assertTrue(dto.getPermissions().contains("READ_TRANSACTION"));
-    }
-
-    @Test
-    @DisplayName("Roles set with a single entry is stored correctly")
-    void test_single_role() {
-        Set<String> single = new HashSet<>(Collections.singletonList("Operator"));
-        UserPermissionsDto dto = new UserPermissionsDto(ID, USERNAME, EMAIL, Collections.emptySet(), single);
-
-        assertEquals(1, dto.getRoles().size());
-        assertTrue(dto.getRoles().contains("Operator"));
+        assertEquals(dto1, dto2);
+        assertEquals(dto1.hashCode(), dto2.hashCode());
     }
 }

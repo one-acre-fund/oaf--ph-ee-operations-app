@@ -20,16 +20,18 @@ package org.apache.fineract.organisation.user;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Set;
 
+/**
+ * Model to hold the user details, and their authorization data
+ */
 @Data
 @AllArgsConstructor
+@NoArgsConstructor
 public class UserPermissionsDto {
-
-    private Long id;
-    private String username;
-    private String email;
+    private AppUser appUser;
     private Set<String> permissions;
     private Set<String> roles;
 }

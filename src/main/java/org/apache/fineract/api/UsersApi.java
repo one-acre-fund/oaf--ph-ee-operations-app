@@ -22,12 +22,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.apache.fineract.core.service.ThreadLocalContextUtil;
-import org.apache.fineract.organisation.permission.Permission;
 import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.role.RoleRepository;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
 import org.apache.fineract.organisation.user.UserPermissionsDto;
+import org.apache.fineract.users.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -43,12 +43,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 import org.springframework.data.jpa.domain.Specification;
 
 import static java.util.stream.Collectors.toList;
@@ -68,6 +65,9 @@ public class UsersApi {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private UserService userService;
 
     private final String resourceNameForPermissions = "USER";
         private final String resourceNameForRolesPermissions = "ROLE";
@@ -127,15 +127,9 @@ public class UsersApi {
     }
 
     @GetMapping(path = "/user/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public AppUser retrieveOne(@PathVariable("userId") Long userId, HttpServletResponse response) {
+    public UserPermissionsDto retrieveOne(@PathVariable("userId") Long userId, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
-        AppUser user = appuserRepository.findById(userId).get();
-        if (user != null) {
-            return user;
-        } else {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return null;
-        }
+        return userService.retrieveUserById(userId, response);
     }
 
     @GetMapping(path = "/user/{userId}/roles", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -301,30 +295,7 @@ public class UsersApi {
         if (!currentUser.getEmail().equalsIgnoreCase(username)) {
             currentUser.validateHasReadPermission(this.resourceNameForPermissions);
         }
-        AppUser user = appuserRepository.findAppUserByName(username);
-        if (user == null) {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return null;
-        }
-        Set<String> uniquePermissions = new LinkedHashSet<>();
-        Set<String> roles = new LinkedHashSet<>();
-        for (Role role : user.getRoles()) {
-            if (!role.getDisabled()) {
-                List<String> codes = new ArrayList<>();
-                for (Permission p : role.getPermissions()) {
-                    codes.add(p.getCode());
-                }
-                roles.add(role.getName());
-                uniquePermissions.addAll(codes);
-            }
-        }
-        return new UserPermissionsDto(
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                uniquePermissions,
-                roles
-        );
+        return userService.retrieveUserByUsername(username, response);
     }
 
     private void saveChanges(AssignmentAction action, List<Role> deltaRoles, Collection<Role> rolesToAssign, AppUser existingUser) {
