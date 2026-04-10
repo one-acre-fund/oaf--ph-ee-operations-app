@@ -4,7 +4,7 @@ import org.apache.fineract.organisation.permission.Permission;
 import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
-import org.apache.fineract.organisation.user.UserPermissionsDto;
+import org.apache.fineract.organisation.user.AppUserDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ class UserServiceImplTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         when(appUserRepository.findAppUserByName(username)).thenReturn(null);
 
-        UserPermissionsDto result = userService.retrieveUserByUsername(username, response);
+        AppUserDto result = userService.retrieveUserByUsername(username, response);
 
         assertNull(result);
         assertEquals(MockHttpServletResponse.SC_NOT_FOUND, response.getStatus());
@@ -82,13 +82,13 @@ class UserServiceImplTest {
 
         when(appUserRepository.findAppUserByName(username)).thenReturn(user);
 
-        UserPermissionsDto result = userService.retrieveUserByUsername(username, response);
+        AppUserDto result = userService.retrieveUserByUsername(username, response);
 
         assertNotNull(result);
-        assertEquals("kelvin.thuku", result.getAppUser().getUsername());
-        assertEquals(username, result.getAppUser().getEmail());
-        assertEquals("Kelvin", result.getAppUser().getFirstname());
-        assertEquals("Thuku", result.getAppUser().getLastname());
+        assertEquals("kelvin.thuku", result.getUsername());
+        assertEquals(username, result.getEmail());
+        assertEquals("Kelvin", result.getFirstname());
+        assertEquals("Thuku", result.getLastname());
         assertEquals(2, result.getRoles().size());
         assertTrue(result.getRoles().contains("Operator"));
         assertTrue(result.getRoles().contains("Viewer"));
@@ -110,7 +110,7 @@ class UserServiceImplTest {
 
         when(appUserRepository.findAppUserByName(username)).thenReturn(user);
 
-        UserPermissionsDto result = userService.retrieveUserByUsername(username, response);
+        AppUserDto result = userService.retrieveUserByUsername(username, response);
 
         assertNotNull(result);
         assertNotNull(result.getPermissions());
@@ -132,7 +132,7 @@ class UserServiceImplTest {
 
         when(appUserRepository.findAppUserByName(username)).thenReturn(user);
 
-        UserPermissionsDto result = userService.retrieveUserByUsername(username, response);
+        AppUserDto result = userService.retrieveUserByUsername(username, response);
 
         assertNotNull(result);
         assertNotNull(result.getPermissions());
@@ -148,7 +148,7 @@ class UserServiceImplTest {
         MockHttpServletResponse response = new MockHttpServletResponse();
         when(appUserRepository.findById(userId)).thenReturn(java.util.Optional.empty());
 
-        UserPermissionsDto result = userService.retrieveUserById(userId, response);
+        AppUserDto result = userService.retrieveUserById(userId, response);
 
         assertNull(result);
         assertEquals(MockHttpServletResponse.SC_NOT_FOUND, response.getStatus());
@@ -186,14 +186,14 @@ class UserServiceImplTest {
 
         when(appUserRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
 
-        UserPermissionsDto result = userService.retrieveUserById(userId, response);
+        AppUserDto result = userService.retrieveUserById(userId, response);
 
         assertNotNull(result);
-        assertEquals(user, result.getAppUser());
-        assertEquals("test.user", result.getAppUser().getUsername());
-        assertEquals("test.user@oneacrefund.org", result.getAppUser().getEmail());
-        assertEquals("Test", result.getAppUser().getFirstname());
-        assertEquals("User", result.getAppUser().getLastname());
+        assertEquals(user.getUsername(), result.getUsername());
+        assertEquals("test.user", result.getUsername());
+        assertEquals("test.user@oneacrefund.org", result.getEmail());
+        assertEquals("Test", result.getFirstname());
+        assertEquals("User", result.getLastname());
         assertEquals(2, result.getRoles().size());
         assertTrue(result.getRoles().contains("Operator"));
         assertTrue(result.getRoles().contains("Viewer"));
@@ -223,7 +223,7 @@ class UserServiceImplTest {
 
         when(appUserRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
 
-        UserPermissionsDto result = userService.retrieveUserById(userId, response);
+        AppUserDto result = userService.retrieveUserById(userId, response);
 
         assertNotNull(result);
         assertEquals(1, result.getRoles().size());
@@ -248,10 +248,10 @@ class UserServiceImplTest {
 
         when(appUserRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
 
-        UserPermissionsDto result = userService.retrieveUserById(userId, response);
+        AppUserDto result = userService.retrieveUserById(userId, response);
 
         assertNotNull(result);
-        assertEquals(user, result.getAppUser());
+        assertEquals(user.getUsername(), result.getUsername());
         assertNotNull(result.getPermissions());
         assertNotNull(result.getRoles());
         assertTrue(result.getPermissions().isEmpty());
@@ -279,7 +279,7 @@ class UserServiceImplTest {
 
         when(appUserRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
 
-        UserPermissionsDto result = userService.retrieveUserById(userId, response);
+        AppUserDto result = userService.retrieveUserById(userId, response);
 
         assertNotNull(result);
         assertEquals(2, result.getRoles().size());
@@ -305,10 +305,10 @@ class UserServiceImplTest {
 
         when(appUserRepository.findById(userId)).thenReturn(java.util.Optional.of(user));
 
-        UserPermissionsDto result = userService.retrieveUserById(userId, response);
+        AppUserDto result = userService.retrieveUserById(userId, response);
 
         assertNotNull(result);
-        assertEquals(user, result.getAppUser());
+        assertEquals(user.getUsername(), result.getUsername());
         assertNotNull(result.getPermissions());
         assertNotNull(result.getRoles());
         assertTrue(result.getPermissions().isEmpty());

@@ -5,7 +5,7 @@ import org.apache.fineract.organisation.permission.Permission;
 import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
-import org.apache.fineract.organisation.user.UserPermissionsDto;
+import org.apache.fineract.organisation.user.AppUserDto;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletResponse;
@@ -25,18 +25,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    public UserPermissionsDto retrieveUserById(Long id, HttpServletResponse response) {
+    public AppUserDto retrieveUserById(Long id, HttpServletResponse response) {
         AppUser user = appUserRepository.findById(id).orElse(null);
-        return retrieveUser(user, response);
+        return mapToDto(user, response);
     }
 
     @Override
-    public UserPermissionsDto retrieveUserByUsername(String username, HttpServletResponse response) {
+    public AppUserDto retrieveUserByUsername(String username, HttpServletResponse response) {
         AppUser user = appUserRepository.findAppUserByName(username);
-        return retrieveUser(user, response);
+        return mapToDto(user, response);
     }
 
-    public UserPermissionsDto retrieveUser(AppUser user, HttpServletResponse response) {
+    public AppUserDto mapToDto(AppUser user, HttpServletResponse response) {
         if (user == null) {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             return null;
@@ -57,8 +57,7 @@ public class UserServiceImpl implements UserService {
             }
         }
 
-
-        return new UserPermissionsDto(user, uniquePermissions, roles);
+        return new AppUserDto(user, uniquePermissions, roles);
     }
 
 }

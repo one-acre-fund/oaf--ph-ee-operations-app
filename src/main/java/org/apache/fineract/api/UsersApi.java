@@ -26,7 +26,7 @@ import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.role.RoleRepository;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
-import org.apache.fineract.organisation.user.UserPermissionsDto;
+import org.apache.fineract.organisation.user.AppUserDto;
 import org.apache.fineract.users.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -127,7 +127,7 @@ public class UsersApi {
     }
 
     @GetMapping(path = "/user/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public UserPermissionsDto retrieveOne(@PathVariable("userId") Long userId, HttpServletResponse response) {
+    public AppUserDto retrieveOne(@PathVariable("userId") Long userId, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
         return userService.retrieveUserById(userId, response);
     }
@@ -288,7 +288,7 @@ public class UsersApi {
     }
 
     @GetMapping(path = "/users/{username}/username", produces = MediaType.APPLICATION_JSON_VALUE)
-    public UserPermissionsDto retrieveUserPermissionsByUsername(
+    public AppUserDto retrieveUserPermissionsByUsername(
             @PathVariable("username") String username, HttpServletResponse response) {
         AppUser currentUser = ThreadLocalContextUtil.getCurrentUser();
         // Allow users to fetch their own permissions; fetching another user's requires READ_USER

@@ -7,7 +7,7 @@ import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.role.RoleRepository;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
-import org.apache.fineract.organisation.user.UserPermissionsDto;
+import org.apache.fineract.organisation.user.AppUserDto;
 import org.apache.fineract.users.service.UserService;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -235,14 +235,14 @@ class UsersApiTest {
         expectedUser.setId(userId);
         expectedUser.setUsername("testuser");
 
-        when(userService.retrieveUserById(anyLong(), any(HttpServletResponse.class))).thenReturn(new UserPermissionsDto(expectedUser, Set.of(), Set.of()));
+        when(userService.retrieveUserById(anyLong(), any(HttpServletResponse.class))).thenReturn(new AppUserDto(expectedUser, Set.of(), Set.of()));
         HttpServletResponse response = mock(HttpServletResponse.class);
         // Act
-        UserPermissionsDto actualUser = usersApi.retrieveOne(userId, response);
+        AppUserDto actualUser = usersApi.retrieveOne(userId, response);
 
         // Assert
         Assertions.assertNotNull(actualUser);
-        Assertions.assertEquals(expectedUser.getUsername(), actualUser.getAppUser().getUsername());
+        Assertions.assertEquals(expectedUser.getUsername(), actualUser.getUsername());
     }
 
     @DisplayName("Retrieve roles for an existing user")
@@ -808,19 +808,19 @@ class UsersApiTest {
         when(connectedUser.getEmail()).thenReturn(email);
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        UserPermissionsDto userModel = new UserPermissionsDto();
+        AppUserDto userModel = new AppUserDto();
         AppUser appUser = new AppUser();
         appUser.setUsername("kelvin.thuku");
         appUser.setEmail(email);
-        userModel.setAppUser(appUser);
+        userModel = new AppUserDto(appUser,Set.of(), Set.of());
         when(userService.retrieveUserByUsername(email, response)).thenReturn(userModel);
 
         // Act
-        UserPermissionsDto dto = usersApi.retrieveUserPermissionsByUsername(email, response);
+        AppUserDto dto = usersApi.retrieveUserPermissionsByUsername(email, response);
 
         // Assert
         assertNotNull(dto);
-        assertEquals("kelvin.thuku", dto.getAppUser().getUsername());
+        assertEquals("kelvin.thuku", dto.getUsername());
         verify(connectedUser, never()).validateHasReadPermission("USER");
         verify(userService).retrieveUserByUsername(email, response);
     }
@@ -833,10 +833,10 @@ class UsersApiTest {
         when(connectedUser.getEmail()).thenReturn("admin@oneacrefund.org");
         doNothing().when(connectedUser).validateHasReadPermission("USER");
         MockHttpServletResponse response = new MockHttpServletResponse();
-        when(userService.retrieveUserByUsername(requestedUser, response)).thenReturn(new UserPermissionsDto());
+        when(userService.retrieveUserByUsername(requestedUser, response)).thenReturn(new AppUserDto());
 
         // Act
-        UserPermissionsDto dto = usersApi.retrieveUserPermissionsByUsername(requestedUser, response);
+        AppUserDto dto = usersApi.retrieveUserPermissionsByUsername(requestedUser, response);
 
         // Assert
         assertNotNull(dto);
@@ -870,7 +870,7 @@ class UsersApiTest {
         when(userService.retrieveUserByUsername(email, response)).thenReturn(null);
 
         // Act
-        UserPermissionsDto dto = usersApi.retrieveUserPermissionsByUsername(email, response);
+        AppUserDto dto = usersApi.retrieveUserPermissionsByUsername(email, response);
 
         // Assert
         assertNull(dto);
