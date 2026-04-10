@@ -7,6 +7,8 @@ import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.role.RoleRepository;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
+import org.apache.fineract.organisation.user.AppUserDto;
+import org.apache.fineract.users.service.UserService;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
@@ -35,6 +37,8 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+
 import org.springframework.data.jpa.domain.Specification;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -43,6 +47,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -62,6 +67,10 @@ class UsersApiTest {
 
     @Mock
     private RoleRepository roleRepository;
+
+    @Mock
+    private UserService userService;
+
     @InjectMocks
     private UsersApi usersApi;
     @Mock
@@ -226,10 +235,10 @@ class UsersApiTest {
         expectedUser.setId(userId);
         expectedUser.setUsername("testuser");
 
-        when(appuserRepository.findById(userId)).thenReturn(Optional.of(expectedUser));
+        when(userService.retrieveUserById(anyLong(), any(HttpServletResponse.class))).thenReturn(new AppUserDto(expectedUser, Set.of(), Set.of()));
         HttpServletResponse response = mock(HttpServletResponse.class);
         // Act
-        AppUser actualUser = usersApi.retrieveOne(userId, response);
+        AppUserDto actualUser = usersApi.retrieveOne(userId, response);
 
         // Assert
         Assertions.assertNotNull(actualUser);
@@ -788,6 +797,84 @@ class UsersApiTest {
         assertThrows(NoAuthorizationException.class,
                 () -> usersApi.retrieveAllUsersWithRolesExcel(response));
         verify(appuserRepository, never()).findAll();
+    }
+
+
+    @DisplayName("retrieveUserPermissionsByUsername delegates to userService when user fetches own profile")
+    @Test
+    void test_retrieve_permissions_by_own_email_skips_permission_check() {
+        // Arrange
+        String email = "kelvin.thuku@oneacrefund.org";
+        when(connectedUser.getEmail()).thenReturn(email);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        AppUserDto userModel = new AppUserDto();
+        AppUser appUser = new AppUser();
+        appUser.setUsername("kelvin.thuku");
+        appUser.setEmail(email);
+        userModel = new AppUserDto(appUser,Set.of(), Set.of());
+        when(userService.retrieveUserByUsername(email, response)).thenReturn(userModel);
+
+        // Act
+        AppUserDto dto = usersApi.retrieveUserPermissionsByUsername(email, response);
+
+        // Assert
+        assertNotNull(dto);
+        assertEquals("kelvin.thuku", dto.getUsername());
+        verify(connectedUser, never()).validateHasReadPermission("USER");
+        verify(userService).retrieveUserByUsername(email, response);
+    }
+
+    @DisplayName("retrieveUserPermissionsByUsername requires READ_USER permission when fetching another user")
+    @Test
+    void test_retrieve_permissions_for_other_user_requires_permission() {
+        // Arrange
+        String requestedUser = "other.user@oneacrefund.org";
+        when(connectedUser.getEmail()).thenReturn("admin@oneacrefund.org");
+        doNothing().when(connectedUser).validateHasReadPermission("USER");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(userService.retrieveUserByUsername(requestedUser, response)).thenReturn(new AppUserDto());
+
+        // Act
+        AppUserDto dto = usersApi.retrieveUserPermissionsByUsername(requestedUser, response);
+
+        // Assert
+        assertNotNull(dto);
+        verify(connectedUser, times(1)).validateHasReadPermission("USER");
+        verify(userService).retrieveUserByUsername(requestedUser, response);
+    }
+
+    @DisplayName("retrieveUserPermissionsByUsername throws NoAuthorizationException when caller lacks READ_USER permission")
+    @Test
+    void test_retrieve_permissions_for_other_user_throws_when_unauthorized() {
+        // Arrange
+        when(connectedUser.getEmail()).thenReturn("admin@oneacrefund.org");
+        doThrow(new NoAuthorizationException("No READ_USER permission"))
+                .when(connectedUser).validateHasReadPermission("USER");
+
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        // Act & Assert
+        assertThrows(NoAuthorizationException.class,
+                () -> usersApi.retrieveUserPermissionsByUsername("other.user@oneacrefund.org", response));
+        verify(userService, never()).retrieveUserByUsername(any(), any());
+    }
+
+    @DisplayName("retrieveUserPermissionsByUsername returns null when service cannot find user")
+    @Test
+    void test_retrieve_permissions_user_not_found() {
+        // Arrange
+        String email = "unknown@oneacrefund.org";
+        when(connectedUser.getEmail()).thenReturn(email);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        when(userService.retrieveUserByUsername(email, response)).thenReturn(null);
+
+        // Act
+        AppUserDto dto = usersApi.retrieveUserPermissionsByUsername(email, response);
+
+        // Assert
+        assertNull(dto);
+        verify(userService).retrieveUserByUsername(email, response);
     }
 
 }

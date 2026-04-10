@@ -26,6 +26,8 @@ import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.role.RoleRepository;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
+import org.apache.fineract.organisation.user.AppUserDto;
+import org.apache.fineract.users.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -63,6 +65,9 @@ public class UsersApi {
 
     @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
+    private UserService userService;
 
     private final String resourceNameForPermissions = "USER";
         private final String resourceNameForRolesPermissions = "ROLE";
@@ -122,15 +127,9 @@ public class UsersApi {
     }
 
     @GetMapping(path = "/user/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    public AppUser retrieveOne(@PathVariable("userId") Long userId, HttpServletResponse response) {
+    public AppUserDto retrieveOne(@PathVariable("userId") Long userId, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
-        AppUser user = appuserRepository.findById(userId).get();
-        if (user != null) {
-            return user;
-        } else {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-            return null;
-        }
+        return userService.retrieveUserById(userId, response);
     }
 
     @GetMapping(path = "/user/{userId}/roles", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -286,6 +285,17 @@ public class UsersApi {
         } else {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
         }
+    }
+
+    @GetMapping(path = "/users/{username}/username", produces = MediaType.APPLICATION_JSON_VALUE)
+    public AppUserDto retrieveUserPermissionsByUsername(
+            @PathVariable("username") String username, HttpServletResponse response) {
+        AppUser currentUser = ThreadLocalContextUtil.getCurrentUser();
+        // Allow users to fetch their own permissions; fetching another user's requires READ_USER
+        if (!currentUser.getEmail().equalsIgnoreCase(username)) {
+            currentUser.validateHasReadPermission(this.resourceNameForPermissions);
+        }
+        return userService.retrieveUserByUsername(username, response);
     }
 
     private void saveChanges(AssignmentAction action, List<Role> deltaRoles, Collection<Role> rolesToAssign, AppUser existingUser) {
