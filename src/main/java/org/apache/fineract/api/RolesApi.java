@@ -28,6 +28,7 @@ import org.apache.fineract.organisation.role.PermissionsCommand;
 import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.role.RolePermissionsData;
 import org.apache.fineract.organisation.role.RoleRepository;
+import org.apache.fineract.organisation.role.service.RoleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -40,16 +41,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
-
-import static java.util.stream.Collectors.toList;
-import static org.apache.fineract.api.AssignmentAction.ASSIGN;
 
 @RestController
 @SecurityRequirement(name = "BearerAuth")
@@ -60,6 +56,9 @@ public class RolesApi {
 
     @Autowired
     private PermissionRepository permissionRepository;
+
+    @Autowired
+    private RoleService roleService;
 
     private final String resourceNameForPermissions = "ROLE";
 
@@ -98,47 +97,13 @@ public class RolesApi {
     @PostMapping(path = "/role", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void create(@RequestBody Role role, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasCreatePermission(this.resourceNameForPermissions);
-        
-        // Normalize role name: lowercase with no spaces
-        String normalizedName = normalizeRoleName(role.getName());
-        role.setName(normalizedName);
-        
-        Role existing = roleRepository.getRoleByName(normalizedName);
-        if (existing == null) {
-            role.setId(null);
-            roleRepository.saveAndFlush(role);
-        } else {
-            response.setStatus(HttpServletResponse.SC_CONFLICT);
-        }
+        roleService.createRole(role, response);
     }
 
     @PutMapping(path = "/role/{roleId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void update(@PathVariable("roleId") Long roleId, @RequestBody Role role, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
-        Optional<Role> optionalExisting = roleRepository.findById(roleId);
-        if (optionalExisting.isPresent()) {
-            Role existing = optionalExisting.get();
-            
-            // Normalize role name: lowercase with no spaces
-            String normalizedName = normalizeRoleName(role.getName());
-            role.setName(normalizedName);
-            
-            // Check if the name is being changed and if the new name already exists for a different role
-            if (!existing.getName().equals(normalizedName)) {
-                Role roleWithSameName = roleRepository.getRoleByName(normalizedName);
-                if (roleWithSameName != null && !Objects.equals(roleWithSameName.getId(), roleId)) {
-                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
-                    return;
-                }
-            }
-            
-            role.setId(roleId);
-            role.setAppUsers(existing.getAppusers());
-            role.setPermissions(existing.getPermissions());
-            roleRepository.saveAndFlush(role);
-        } else {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-        }
+        roleService.updateRole(roleId, role, response);
     }
 
 
@@ -228,16 +193,5 @@ public class RolesApi {
         }
         return null;
     }
-    
-    /**
-     * Normalizes role name to be lowercase with no spaces
-     * @param roleName the original role name
-     * @return normalized role name (lowercase, no spaces)
-     */
-    private String normalizeRoleName(String roleName) {
-        if (roleName == null) {
-            return null;
-        }
-        return roleName.toLowerCase().replaceAll("\\s+", "");
-    }
+
 }
