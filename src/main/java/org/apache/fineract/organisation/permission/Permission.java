@@ -38,7 +38,7 @@ import java.util.Objects;
 @EntityListeners(CustomAuditingEntityListener.class)
 public class Permission extends AbstractPersistableCustom<Long> {
 
-    @Column(name = "grouping", nullable = false, length = 45)
+    @Column(name = "`grouping`", nullable = false, length = 45)
     private String grouping;
 
     @Column(name = "code", nullable = false, length = 100)

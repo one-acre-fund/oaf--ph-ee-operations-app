@@ -5,6 +5,8 @@ Release Notes
         * User Management
             * [CP-4069] - Add API to fetch user details by username
             * [CP-4069] - Improvement on update user and role
+        * Database
+            * [CP-4035] - Upgrade to MySQL 8.0 and address incompatibility issues with MySQL 5.7
 
 ## Version 1.1.12 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs

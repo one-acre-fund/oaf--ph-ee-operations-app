@@ -10,6 +10,8 @@ fineract:
       protocol: jdbc
       subprotocol: mysql
       driverclass_name: com.mysql.cj.jdbc.Driver
+  flyway:
+    repair-on-startup: false
 
 # Interface time zone reference : https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
 interface:

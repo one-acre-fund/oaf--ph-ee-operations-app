@@ -1,7 +1,7 @@
 version: '2'
 services:
   operations-mysql:
-    image: mysql:5.7
+    image: mysql:8.0
     restart: always
     volumes:
       - /home/docker/data/mysql:/var/lib/mysql

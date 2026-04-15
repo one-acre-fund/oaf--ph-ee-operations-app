@@ -81,6 +81,9 @@ public class TenantDatabaseUpgradeService {
     @Value("${token.client.channel.secret}")
     private String channelClientSecret;
 
+    @Value("${fineract.flyway.repair-on-startup:false}")
+    private boolean flywayRepairOnStartup;
+
     @Value("#{'${tenants}'.split(',')}")
     private List<String> tenants;
 
@@ -111,6 +114,10 @@ public class TenantDatabaseUpgradeService {
                     placeholders.put("channelClientSecret", channelClientSecret);
                     placeholders.put("identityProviderResourceId", "identity-provider"); // add identity provider as aud claim
                     fw.setPlaceholders(placeholders);
+                    if (flywayRepairOnStartup) {
+                        fw.repair();
+                        logger.warn("Flyway repair executed for tenant: {}", tenant.getSchemaName());
+                    }
                     fw.migrate();
                 } catch (Exception e) {
                     logger.error("Error when running flyway on tenant: {}", tenant.getSchemaName(), e);

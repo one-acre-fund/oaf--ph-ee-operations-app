@@ -27,35 +27,37 @@ CREATE TABLE IF NOT EXISTS `m_password_validation_policy` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1 ;
 
 
-INSERT INTO `m_password_validation_policy` (
-`id` ,
-`regex` ,
-`description` ,
-`active`
-)
-VALUES (
-NULL ,  '^.{1,50}$',  'Password most be at least 1 character and not more that 50 characters long',  '1'
+INSERT INTO `m_password_validation_policy` (`regex`, `description`, `active`)
+SELECT '^.{1,50}$', 'Password most be at least 1 character and not more that 50 characters long', '1'
+WHERE NOT EXISTS (
+    SELECT 1 FROM `m_password_validation_policy` WHERE `regex` = '^.{1,50}$'
 );
 
-INSERT INTO `m_password_validation_policy` (
-`id` ,
-`regex` ,
-`description` ,
-`active`
-)
-VALUES (
-NULL ,  '^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?!.*\\s).{6,50}$',  'Password must be at least 6 characters, no more than 50 characters long, must include at least one upper case letter, one lower case letter, one numeric digit and no space',  '0'
+INSERT INTO `m_password_validation_policy` (`regex`, `description`, `active`)
+SELECT '^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?!.*\\s).{6,50}$',
+       'Password must be at least 6 characters, no more than 50 characters long, must include at least one upper case letter, one lower case letter, one numeric digit and no space',
+       '0'
+WHERE NOT EXISTS (
+    SELECT 1 FROM `m_password_validation_policy` WHERE `regex` = '^(?=.*\\d)(?=.*[a-z])(?=.*[A-Z])(?!.*\\s).{6,50}$'
 );
 
-INSERT INTO m_permission (grouping, code, entity_name, action_name, can_maker_checker)
-VALUE ("authorisation","READ_PASSWORD_PREFERENCES","PASSWORD_PREFERENCES","READ",0);
+INSERT INTO `m_permission` (`grouping`, `code`, `entity_name`, `action_name`, `can_maker_checker`)
+SELECT 'authorisation', 'READ_PASSWORD_PREFERENCES', 'PASSWORD_PREFERENCES', 'READ', 0
+WHERE NOT EXISTS (
+    SELECT 1 FROM `m_permission` WHERE `code` = 'READ_PASSWORD_PREFERENCES'
+);
 
-INSERT INTO m_permission (grouping, code, entity_name, action_name, can_maker_checker)
-VALUE ("authorisation","UPDATE_PASSWORD_PREFERENCES","PASSWORD_PREFERENCES","UPDATE",0);
+INSERT INTO `m_permission` (`grouping`, `code`, `entity_name`, `action_name`, `can_maker_checker`)
+SELECT 'authorisation', 'UPDATE_PASSWORD_PREFERENCES', 'PASSWORD_PREFERENCES', 'UPDATE', 0
+WHERE NOT EXISTS (
+    SELECT 1 FROM `m_permission` WHERE `code` = 'UPDATE_PASSWORD_PREFERENCES'
+);
 
-INSERT INTO m_permission (grouping, code, entity_name, action_name, can_maker_checker)
-VALUE ("authorisation","UPDATE_PASSWORD_PREFERENCES_CHECKER","PASSWORD_PREFERENCES","UPDATE_CHECKER",0);
-
+INSERT INTO `m_permission` (`grouping`, `code`, `entity_name`, `action_name`, `can_maker_checker`)
+SELECT 'authorisation', 'UPDATE_PASSWORD_PREFERENCES_CHECKER', 'PASSWORD_PREFERENCES', 'UPDATE_CHECKER', 0
+WHERE NOT EXISTS (
+    SELECT 1 FROM `m_permission` WHERE `code` = 'UPDATE_PASSWORD_PREFERENCES_CHECKER'
+);
 
 
 
