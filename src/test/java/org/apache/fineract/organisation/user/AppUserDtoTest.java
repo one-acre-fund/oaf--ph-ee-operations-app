@@ -289,7 +289,7 @@ class AppUserDtoTest {
         Set<String> permissions = Set.of("READ_TRANSACTION");
         Set<String> roles = Set.of("Operator");
 
-        AppUserDto dto = new AppUserDto(email, username, firstname, lastname, accountNonExpired,
+        AppUserDto dto = new AppUserDto(1L, email, username,firstname, lastname, accountNonExpired,
                 accountNonLocked, credentialsNonExpired, enabled, firstTimeLoginRemaining, deleted,
                 lastTimePasswordUpdated, passwordNeverExpires, payeePartyIds, currencies,
                 payeePartyIdTypes, permissions, roles);

@@ -27,12 +27,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.never;
-
+import static org.mockito.Mockito.any;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -194,13 +195,16 @@ class RolesApiTest {
         HttpServletResponse response = mock(HttpServletResponse.class);
 
         Role existingRole = new Role();
-        existingRole.setName("existingRoleName");
+        existingRole.setName("existingrolename"); // Correct normalized name
 
-        when(roleRepository.getRoleByName("existingRoleName")).thenReturn(existingRole);
+        Role newRole = new Role();
+        newRole.setName("existingRoleName"); // Will be normalized to "existingrolename"
 
-        rolesApi.create(existingRole, response);
+        when(roleRepository.getRoleByName("existingrolename")).thenReturn(existingRole); // Correct normalized lookup
 
-        verify(roleRepository, never()).saveAndFlush(existingRole);
+        rolesApi.create(newRole, response);
+
+        verify(roleRepository, never()).saveAndFlush(any(Role.class)); // Use any(Role.class) since name gets modified
         verify(response, times(1)).setStatus(HttpServletResponse.SC_CONFLICT);
     }
 
@@ -237,7 +241,7 @@ class RolesApiTest {
         // Arrange
         HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
         Long roleId = 1L;
-        
+
         Role role = new Role();
         role.setId(roleId);
         role.setPermissions(new ArrayList<>());
@@ -278,7 +282,7 @@ class RolesApiTest {
         Long roleId = 1L;
         Role role = new Role();
         role.setId(roleId);
-        
+
         Permission permission1 = new Permission();
         permission1.setId(1L);
         Permission permission2 = new Permission();
@@ -510,7 +514,7 @@ class RolesApiTest {
         Long roleId = 999L;
         Map<String, Boolean> permissionsMap = new HashMap<>();
         permissionsMap.put("READ_USER", true);
-        
+
         PermissionsCommand command = new PermissionsCommand(permissionsMap);
 
         when(roleRepository.findById(roleId)).thenReturn(Optional.empty());
@@ -871,6 +875,708 @@ class RolesApiTest {
         // Assert
         assertFalse(role.getDisabled());
         verify(roleRepository, times(1)).saveAndFlush(role);
+    }
+
+    @DisplayName("Update role - role not found returns 404")
+    @Test
+    void test_update_role_not_found() {
+        // Arrange
+        Long roleId = 999L;
+        Role updatedRole = new Role();
+        updatedRole.setName("New Role Name");
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.empty());
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_NOT_FOUND);
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+    }
+
+    @DisplayName("Update role - no update permission throws exception")
+    @Test
+    void test_update_role_no_update_permission() {
+        // Arrange
+        Long roleId = 1L;
+        Role updatedRole = new Role();
+        updatedRole.setName("New Role Name");
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+
+        Mockito.doThrow(new RuntimeException("User does not have UPDATE permission"))
+                .when(connectedUser).validateHasUpdatePermission("ROLE");
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () -> {
+            rolesApi.update(roleId, updatedRole, response);
+        });
+
+        verify(roleRepository, never()).findById(Mockito.any());
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+    }
+
+    @DisplayName("Update role with duplicate name for different role returns 400")
+    @Test
+    void test_update_role_with_duplicate_name() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("originalrole");
+        
+        Role anotherRole = new Role();
+        anotherRole.setId(2L);
+        anotherRole.setName("duplicatename");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("Duplicate Name"); // Will normalize to "duplicatename"
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("duplicatename")).thenReturn(anotherRole); // Normalized lookup
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+    }
+
+    @DisplayName("Update role with same name as itself succeeds")
+    @Test
+    void test_update_role_with_same_name() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("SameName");
+        existingRole.setDescription("Original description");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("SameName"); // Same name as existing
+        updatedRole.setDescription("Updated description");
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("SameName")).thenReturn(existingRole); // Returns the same role
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals(roleId, updatedRole.getId());
+        verify(response, never()).setStatus(Mockito.anyInt());
+    }
+
+    @DisplayName("Update role preserves existing relationships")
+    @Test
+    void test_update_role_preserves_relationships() {
+        // Arrange
+        Long roleId = 1L;
+        
+        // Create existing permissions
+        Permission perm1 = new Permission();
+        perm1.setCode("READ_USER");
+        Permission perm2 = new Permission();
+        perm2.setCode("WRITE_USER");
+        Collection<Permission> existingPermissions = Arrays.asList(perm1, perm2);
+        
+        // Create existing app users
+        AppUser user1 = new AppUser();
+        user1.setUsername("user1");
+        AppUser user2 = new AppUser();
+        user2.setUsername("user2");
+        Collection<AppUser> existingUsers = Arrays.asList(user1, user2);
+        
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("ExistingRole");
+        existingRole.setPermissions(existingPermissions);
+        existingRole.setAppUsers(existingUsers);
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("UpdatedRole");
+        updatedRole.setDescription("Updated description");
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("updatedrole")).thenReturn(null); // Normalized lookup
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals(roleId, updatedRole.getId());
+        assertEquals(existingPermissions, updatedRole.getPermissions());
+        assertEquals("updatedrole", updatedRole.getName()); // Normalized name
+        assertEquals("Updated description", updatedRole.getDescription());
+    }
+
+    @DisplayName("Update role with empty name to existing empty name conflict")
+    @Test
+    void test_update_role_with_empty_name_conflict() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("ExistingRole");
+        
+        Role anotherRole = new Role();
+        anotherRole.setId(2L);
+        anotherRole.setName("");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName(""); // Empty name that conflicts with another role
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("")).thenReturn(anotherRole);
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+    }
+
+    @DisplayName("Update role with very long name")
+    @Test
+    void test_update_role_with_long_name() {
+        // Arrange
+        Long roleId = 1L;
+        String longName = "A".repeat(500); // Very long name
+        String normalizedLongName = "a".repeat(500); // Expected normalized name
+        
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("ShortName");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName(longName);
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName(normalizedLongName)).thenReturn(null); // Normalized lookup
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert - Should succeed as length validation is handled by database constraints
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals(normalizedLongName, updatedRole.getName()); // Expect normalized name
+    }
+
+    @DisplayName("Update role preserves ID correctly")
+    @Test
+    void test_update_role_preserves_id() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("ExistingRole");
+        
+        Role updatedRole = new Role();
+        updatedRole.setId(999L); // Different ID that should be overridden
+        updatedRole.setName("UpdatedRole");
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert - Should preserve the path variable ID, not the one in the role object
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals(roleId, updatedRole.getId()); // Should be set to path variable ID
+        assertNotEquals(999L, updatedRole.getId());
+    }
+
+    @DisplayName("Update role with special characters in name")
+    @Test
+    void test_update_role_with_special_characters() {
+        // Arrange
+        Long roleId = 1L;
+        String specialName = "Admin@#$%^&*()[]{}|;:'\",.<>?/~`";
+        String normalizedSpecialName = "admin@#$%^&*()[]{}|;:'\",.<>?/~`"; // Expected normalized name
+        
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("RegularName");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName(specialName);
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName(normalizedSpecialName)).thenReturn(null); // Normalized lookup
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals(normalizedSpecialName, updatedRole.getName()); // Expect normalized name
+    }
+
+    @DisplayName("Update role with whitespace-only name")
+    @Test
+    void test_update_role_with_whitespace_name() {
+        // Arrange
+        Long roleId = 1L;
+        String whitespaceName = "   \t\n   ";
+        String normalizedWhitespaceName = ""; // Expected normalized name (empty string)
+        
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("RegularName");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName(whitespaceName);
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName(normalizedWhitespaceName)).thenReturn(null); // Normalized lookup
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals(normalizedWhitespaceName, updatedRole.getName()); // Expect normalized name
+    }
+
+    @DisplayName("Update role with numeric name")
+    @Test
+    void test_update_role_with_numeric_name() {
+        // Arrange
+        Long roleId = 1L;
+        String numericName = "12345";
+        
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("TextName");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName(numericName);
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName(numericName)).thenReturn(null);
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals(numericName, updatedRole.getName());
+    }
+
+    @DisplayName("Update role description only")
+    @Test
+    void test_update_role_description_only() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("SameName");
+        existingRole.setDescription("Old Description");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("SameName"); // Same name
+        updatedRole.setDescription("New Description"); // Only description changes
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("SameName")).thenReturn(existingRole);
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals("New Description", updatedRole.getDescription());
+        assertEquals(roleId, updatedRole.getId());
+    }
+
+    @DisplayName("Update role with null description")
+    @Test
+    void test_update_role_with_null_description() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("RoleName");
+        existingRole.setDescription("Old Description");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("UpdatedName");
+        updatedRole.setDescription(null); // Null description
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("updatedname")).thenReturn(null); // Normalized lookup
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals("updatedname", updatedRole.getName()); // Expect normalized name
+        assertEquals(null, updatedRole.getDescription());
+    }
+
+    @DisplayName("Update role with disabled flag change")
+    @Test
+    void test_update_role_disabled_flag() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("RoleName");
+        existingRole.setDisabled(false);
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("UpdatedName");
+        updatedRole.setDisabled(true); // Change disabled status
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("updatedname")).thenReturn(null); // Normalized lookup
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals("updatedname", updatedRole.getName()); // Expect normalized name
+        assertTrue(updatedRole.getDisabled());
+    }
+
+    @DisplayName("Update role with Unicode characters in name")
+    @Test
+    void test_update_role_with_unicode_name() {
+        // Arrange
+        Long roleId = 1L;
+        String unicodeName = "Rôle Ñame 中文 🚀";
+        String normalizedUnicodeName = "rôleñame中文🚀"; // Expected normalized name (lowercase, no spaces)
+        
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("RegularName");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName(unicodeName);
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName(normalizedUnicodeName)).thenReturn(null); // Normalized lookup
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals(normalizedUnicodeName, updatedRole.getName()); // Expect normalized name
+    }
+
+    @DisplayName("Update role when existing role has null permissions and users")
+    @Test
+    void test_update_role_with_null_relationships() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("ExistingRole");
+        existingRole.setPermissions(null); // Null relationships
+        existingRole.setAppUsers(null);
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("UpdatedRole");
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("updatedrole")).thenReturn(null); // Normalized lookup
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals("updatedrole", updatedRole.getName()); // Expect normalized name
+        assertEquals(null, updatedRole.getPermissions());
+    }
+
+    @DisplayName("Update role concurrent modification scenario")
+    @Test
+    void test_update_role_concurrent_modification() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("OriginalName");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("Updated Name"); // Will normalize to "updatedname"
+        
+        Role concurrentRole = new Role();
+        concurrentRole.setId(2L);
+        concurrentRole.setName("updatedname"); // Another role got this normalized name
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("updatedname")).thenReturn(concurrentRole); // Concurrent modification
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+    }
+
+    @DisplayName("Update role with case normalization prevents conflicts")
+    @Test
+    void test_update_role_case_sensitive_name() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("admin");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("ADMIN"); // Will normalize to "admin", same as existing
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("admin")).thenReturn(existingRole); // Same role returned
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert - Should succeed because it's the same role after normalization
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals("admin", updatedRole.getName()); // Normalized name
+        verify(response, never()).setStatus(Mockito.anyInt());
+    }
+
+    // Additional tests for role name normalization
+    @DisplayName("Create role normalizes name to lowercase with no spaces")
+    @Test
+    void test_create_role_normalizes_name() {
+        // Arrange
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        Role newRole = new Role();
+        newRole.setName("Admin Role With Spaces");
+
+        when(roleRepository.getRoleByName("adminrolewithspaces")).thenReturn(null);
+
+        // Act
+        rolesApi.create(newRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(newRole);
+        assertEquals("adminrolewithspaces", newRole.getName());
+        verify(response, never()).setStatus(HttpServletResponse.SC_CONFLICT);
+    }
+
+    @DisplayName("Update role normalizes name to lowercase with no spaces")
+    @Test
+    void test_update_role_normalizes_name() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("originalname");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("Updated Role Name");
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("updatedrolename")).thenReturn(null);
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals("updatedrolename", updatedRole.getName());
+        assertEquals(roleId, updatedRole.getId());
+    }
+
+    @DisplayName("Create role with mixed case and spaces normalizes correctly")
+    @Test
+    void test_create_role_mixed_case_spaces() {
+        // Arrange
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        Role newRole = new Role();
+        newRole.setName("SuPeR    AdMiN   RoLe");
+
+        when(roleRepository.getRoleByName("superadminrole")).thenReturn(null);
+
+        // Act
+        rolesApi.create(newRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(newRole);
+        assertEquals("superadminrole", newRole.getName());
+    }
+
+    @DisplayName("Update role with normalized name that conflicts returns 400")
+    @Test
+    void test_update_role_normalized_name_conflict() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("originalrole");
+        
+        Role anotherRole = new Role();
+        anotherRole.setId(2L);
+        anotherRole.setName("existingrole");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("Existing Role"); // Will be normalized to "existingrole"
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("existingrole")).thenReturn(anotherRole);
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+        verify(roleRepository, never()).saveAndFlush(Mockito.any());
+    }
+
+    @DisplayName("Create role with normalized name that already exists returns conflict")
+    @Test
+    void test_create_role_normalized_name_exists() {
+        // Arrange
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        Role existingRole = new Role();
+        existingRole.setName("existingrole");
+
+        Role newRole = new Role();
+        newRole.setName("Existing Role"); // Will be normalized to "existingrole"
+
+        when(roleRepository.getRoleByName("existingrole")).thenReturn(existingRole);
+
+        // Act
+        rolesApi.create(newRole, response);
+
+        // Assert
+        verify(roleRepository, never()).saveAndFlush(newRole);
+        verify(response, times(1)).setStatus(HttpServletResponse.SC_CONFLICT);
+    }
+
+    @DisplayName("Role name with tabs and newlines are normalized")
+    @Test
+    void test_normalize_role_name_tabs_newlines() {
+        // Arrange
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        Role newRole = new Role();
+        newRole.setName("Role\t\nWith\r\nWhitespace");
+
+        when(roleRepository.getRoleByName("rolewithwhitespace")).thenReturn(null);
+
+        // Act
+        rolesApi.create(newRole, response);
+
+        // Assert
+        assertEquals("rolewithwhitespace", newRole.getName());
+        verify(roleRepository, times(1)).saveAndFlush(newRole);
+    }
+
+    @DisplayName("Role name normalization handles null name")
+    @Test
+    void test_normalize_null_role_name() {
+        // Arrange
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        Role newRole = new Role();
+        newRole.setName(null);
+
+        when(roleRepository.getRoleByName(null)).thenReturn(null);
+
+        // Act & Assert - This should handle null gracefully
+        rolesApi.create(newRole, response);
+        
+        // The normalization should return null for null input
+        assertEquals(null, newRole.getName());
+        verify(roleRepository, times(1)).saveAndFlush(newRole);
+    }
+
+    @DisplayName("Role name with only spaces becomes empty string")
+    @Test
+    void test_normalize_spaces_only_role_name() {
+        // Arrange
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        Role newRole = new Role();
+        newRole.setName("   \t  \n  ");
+
+        when(roleRepository.getRoleByName("")).thenReturn(null);
+
+        // Act
+        rolesApi.create(newRole, response);
+
+        // Assert
+        assertEquals("", newRole.getName());
+        verify(roleRepository, times(1)).saveAndFlush(newRole);
+    }
+
+    @DisplayName("Update preserves existing normalized name correctly")
+    @Test
+    void test_update_role_same_normalized_name() {
+        // Arrange
+        Long roleId = 1L;
+        Role existingRole = new Role();
+        existingRole.setId(roleId);
+        existingRole.setName("adminrole");
+        
+        Role updatedRole = new Role();
+        updatedRole.setName("Admin Role"); // Will normalize to "adminrole"
+        updatedRole.setDescription("Updated description");
+        
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        
+        when(roleRepository.findById(roleId)).thenReturn(Optional.of(existingRole));
+        when(roleRepository.getRoleByName("adminrole")).thenReturn(existingRole); // Same role
+
+        // Act
+        rolesApi.update(roleId, updatedRole, response);
+
+        // Assert
+        verify(roleRepository, times(1)).saveAndFlush(updatedRole);
+        assertEquals("adminrole", updatedRole.getName());
+        assertEquals(roleId, updatedRole.getId());
+        verify(response, never()).setStatus(Mockito.anyInt());
     }
 
 }

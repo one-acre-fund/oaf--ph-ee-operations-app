@@ -45,6 +45,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
@@ -71,9 +72,9 @@ public class RolesApi {
     @GetMapping(path = "/role/{roleId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Role retrieveOne(@PathVariable("roleId") Long roleId, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
-        Role role = roleRepository.findById(roleId).get();
-        if(role != null) {
-            return role;
+        Optional<Role> optionalRole = roleRepository.findById(roleId);
+        if(optionalRole.isPresent()) {
+            return optionalRole.get();
         } else {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             return null;
@@ -97,7 +98,12 @@ public class RolesApi {
     @PostMapping(path = "/role", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void create(@RequestBody Role role, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasCreatePermission(this.resourceNameForPermissions);
-        Role existing = roleRepository.getRoleByName(role.getName());
+        
+        // Normalize role name: lowercase with no spaces
+        String normalizedName = normalizeRoleName(role.getName());
+        role.setName(normalizedName);
+        
+        Role existing = roleRepository.getRoleByName(normalizedName);
         if (existing == null) {
             role.setId(null);
             roleRepository.saveAndFlush(role);
@@ -109,8 +115,23 @@ public class RolesApi {
     @PutMapping(path = "/role/{roleId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void update(@PathVariable("roleId") Long roleId, @RequestBody Role role, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
-        Role existing = roleRepository.findById(roleId).get();
-        if (existing != null) {
+        Optional<Role> optionalExisting = roleRepository.findById(roleId);
+        if (optionalExisting.isPresent()) {
+            Role existing = optionalExisting.get();
+            
+            // Normalize role name: lowercase with no spaces
+            String normalizedName = normalizeRoleName(role.getName());
+            role.setName(normalizedName);
+            
+            // Check if the name is being changed and if the new name already exists for a different role
+            if (!existing.getName().equals(normalizedName)) {
+                Role roleWithSameName = roleRepository.getRoleByName(normalizedName);
+                if (roleWithSameName != null && !Objects.equals(roleWithSameName.getId(), roleId)) {
+                    response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                    return;
+                }
+            }
+            
             role.setId(roleId);
             role.setAppUsers(existing.getAppusers());
             role.setPermissions(existing.getPermissions());
@@ -206,5 +227,17 @@ public class RolesApi {
             }
         }
         return null;
+    }
+    
+    /**
+     * Normalizes role name to be lowercase with no spaces
+     * @param roleName the original role name
+     * @return normalized role name (lowercase, no spaces)
+     */
+    private String normalizeRoleName(String roleName) {
+        if (roleName == null) {
+            return null;
+        }
+        return roleName.toLowerCase().replaceAll("\\s+", "");
     }
 }
