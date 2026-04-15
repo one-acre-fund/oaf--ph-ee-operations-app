@@ -4,8 +4,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.fineract.organisation.permission.Permission;
 import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.user.AppUser;
-import org.apache.fineract.organisation.user.AppUserRepository;
 import org.apache.fineract.organisation.user.AppUserDto;
+import org.apache.fineract.organisation.user.AppUserRepository;
+import org.apache.fineract.organisation.user.AppUserUpdateDto;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletResponse;
@@ -13,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Slf4j
@@ -58,6 +60,27 @@ public class UserServiceImpl implements UserService {
         }
 
         return new AppUserDto(user, uniquePermissions, roles);
+    }
+
+    @Override
+    public boolean updateUser(Long userId, AppUserUpdateDto updateDto, HttpServletResponse response) {
+        Optional<AppUser> existingOptional = appUserRepository.findById(userId);
+        if (existingOptional.isPresent()) {
+            AppUser existing = existingOptional.get();
+            // Only update fields that are provided (non-null) in the DTO
+            if (updateDto.getFirstname() != null) {
+                existing.setFirstname(updateDto.getFirstname());
+            }
+            if (updateDto.getLastname() != null) {
+                existing.setLastname(updateDto.getLastname());
+            }
+
+            appUserRepository.saveAndFlush(existing);
+            return true;
+        } else {
+            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+            return false;
+        }
     }
 
 }

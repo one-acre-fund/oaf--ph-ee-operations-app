@@ -27,6 +27,7 @@ import org.apache.fineract.organisation.role.RoleRepository;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
 import org.apache.fineract.organisation.user.AppUserDto;
+import org.apache.fineract.organisation.user.AppUserUpdateDto;
 import org.apache.fineract.users.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
@@ -166,18 +167,9 @@ public class UsersApi {
     }
 
     @PutMapping(path = "/user/{userId}", consumes = MediaType.APPLICATION_JSON_VALUE)
-    public void update(@PathVariable("userId") Long userId, @RequestBody AppUser appUser, HttpServletResponse response) {
+    public void update(@PathVariable("userId") Long userId, @RequestBody AppUserUpdateDto updateDto, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
-        Optional<AppUser> existing = appuserRepository.findById(userId);
-        if (existing.isPresent()) {
-            appUser.setId(userId);
-            if (!existing.get().getPassword().equals(appUser.getPassword()))
-                appUser.setPassword(passwordEncoder.encode(appUser.getPassword()));
-            appUser.setRoles(existing.get().getRoles());
-            appuserRepository.saveAndFlush(appUser);
-        } else {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-        }
+        userService.updateUser(userId, updateDto, response);
     }
 
     @PostMapping(path = "/user/{userId}/deactivate", consumes = MediaType.APPLICATION_JSON_VALUE)

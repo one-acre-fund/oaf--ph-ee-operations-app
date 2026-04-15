@@ -28,6 +28,7 @@ import org.apache.fineract.organisation.role.PermissionsCommand;
 import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.role.RolePermissionsData;
 import org.apache.fineract.organisation.role.RoleRepository;
+import org.apache.fineract.organisation.role.service.RoleService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -40,15 +41,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletResponse;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-
-import static java.util.stream.Collectors.toList;
-import static org.apache.fineract.api.AssignmentAction.ASSIGN;
 
 @RestController
 @SecurityRequirement(name = "BearerAuth")
@@ -59,6 +56,9 @@ public class RolesApi {
 
     @Autowired
     private PermissionRepository permissionRepository;
+
+    @Autowired
+    private RoleService roleService;
 
     private final String resourceNameForPermissions = "ROLE";
 
@@ -71,9 +71,9 @@ public class RolesApi {
     @GetMapping(path = "/role/{roleId}", produces = MediaType.APPLICATION_JSON_VALUE)
     public Role retrieveOne(@PathVariable("roleId") Long roleId, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.resourceNameForPermissions);
-        Role role = roleRepository.findById(roleId).get();
-        if(role != null) {
-            return role;
+        Optional<Role> optionalRole = roleRepository.findById(roleId);
+        if(optionalRole.isPresent()) {
+            return optionalRole.get();
         } else {
             response.setStatus(HttpServletResponse.SC_NOT_FOUND);
             return null;
@@ -97,27 +97,13 @@ public class RolesApi {
     @PostMapping(path = "/role", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void create(@RequestBody Role role, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasCreatePermission(this.resourceNameForPermissions);
-        Role existing = roleRepository.getRoleByName(role.getName());
-        if (existing == null) {
-            role.setId(null);
-            roleRepository.saveAndFlush(role);
-        } else {
-            response.setStatus(HttpServletResponse.SC_CONFLICT);
-        }
+        roleService.createRole(role, response);
     }
 
     @PutMapping(path = "/role/{roleId}", consumes = MediaType.APPLICATION_JSON_VALUE)
     public void update(@PathVariable("roleId") Long roleId, @RequestBody Role role, HttpServletResponse response) {
         ThreadLocalContextUtil.getCurrentUser().validateHasUpdatePermission(this.resourceNameForPermissions);
-        Role existing = roleRepository.findById(roleId).get();
-        if (existing != null) {
-            role.setId(roleId);
-            role.setAppUsers(existing.getAppusers());
-            role.setPermissions(existing.getPermissions());
-            roleRepository.saveAndFlush(role);
-        } else {
-            response.setStatus(HttpServletResponse.SC_NOT_FOUND);
-        }
+        roleService.updateRole(roleId, role, response);
     }
 
 
@@ -207,4 +193,5 @@ public class RolesApi {
         }
         return null;
     }
+
 }

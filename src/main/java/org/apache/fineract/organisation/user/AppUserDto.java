@@ -33,6 +33,8 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 public class AppUserDto {
+    private Long id;
+
     private String email;
 
     private String username;
@@ -68,6 +70,7 @@ public class AppUserDto {
     private Set<String> roles;
 
     public AppUserDto(AppUser user, Set<String> uniquePermissions, Set<String> roles) {
+        this.id = user.getId();
         this.email = user.getEmail();
         this.username = user.getUsername();
         this.firstname = user.getFirstname();

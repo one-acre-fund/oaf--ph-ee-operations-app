@@ -8,6 +8,7 @@ import org.apache.fineract.organisation.role.RoleRepository;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
 import org.apache.fineract.organisation.user.AppUserDto;
+import org.apache.fineract.organisation.user.AppUserUpdateDto;
 import org.apache.fineract.users.service.UserService;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -326,26 +327,17 @@ class UsersApiTest {
     void update_existing_user_with_valid_data() {
         // Arrange
         Long userId = 1L;
-        AppUser existingUser = new AppUser();
-        existingUser.setId(userId);
-        existingUser.setPassword("oldPassword");
-        existingUser.setRoles(new ArrayList<>());
-
-        AppUser updatedUser = new AppUser();
-        updatedUser.setPassword("newPassword");
+        AppUserUpdateDto updateDto = new AppUserUpdateDto();
+        updateDto.setFirstname("NewFirstname");
 
         HttpServletResponse response = mock(HttpServletResponse.class);
-        when(appuserRepository.findById(userId)).thenReturn(Optional.of(existingUser));
-        when(passwordEncoder.encode("newPassword")).thenReturn("encodedNewPassword");
+        when(userService.updateUser(userId, updateDto, response)).thenReturn(true);
 
         // Act
-        usersApi.update(userId, updatedUser, response);
+        usersApi.update(userId, updateDto, response);
 
         // Assert
-        assertEquals(userId, updatedUser.getId());
-        assertEquals("encodedNewPassword", updatedUser.getPassword());
-        assertEquals(existingUser.getRoles(), updatedUser.getRoles());
-        verify(appuserRepository).saveAndFlush(updatedUser);
+        verify(userService).updateUser(userId, updateDto, response);
     }
 
     @DisplayName("Update a user that does not exist")
@@ -353,16 +345,16 @@ class UsersApiTest {
     void update_nonexistent_user() {
         // Arrange
         Long userId = 1L;
-        AppUser updatedUser = new AppUser();
+        AppUserUpdateDto updateDto = new AppUserUpdateDto();
         HttpServletResponse response = mock(HttpServletResponse.class);
-        when(appuserRepository.findById(userId)).thenReturn(Optional.empty());
+        
+        when(userService.updateUser(userId, updateDto, response)).thenReturn(false);
 
         // Act
-        usersApi.update(userId, updatedUser, response);
+        usersApi.update(userId, updateDto, response);
 
         // Assert
-        verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
-        verify(appuserRepository, never()).saveAndFlush(any(AppUser.class));
+        verify(userService).updateUser(userId, updateDto, response);
     }
 
     @DisplayName("Deactivate an enabled user successfully")

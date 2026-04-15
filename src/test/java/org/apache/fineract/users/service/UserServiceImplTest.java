@@ -5,6 +5,7 @@ import org.apache.fineract.organisation.role.Role;
 import org.apache.fineract.organisation.user.AppUser;
 import org.apache.fineract.organisation.user.AppUserRepository;
 import org.apache.fineract.organisation.user.AppUserDto;
+import org.apache.fineract.organisation.user.AppUserUpdateDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -15,11 +16,14 @@ import org.springframework.mock.web.MockHttpServletResponse;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -230,7 +234,7 @@ class UserServiceImplTest {
         assertTrue(result.getRoles().contains("Operator"));
         assertEquals(1, result.getPermissions().size());
         assertTrue(result.getPermissions().contains("READ_TRANSACTION"));
-        assertTrue(!result.getPermissions().contains("ADMIN_ACCESS"));
+        assertFalse(result.getPermissions().contains("ADMIN_ACCESS"));
         verify(appUserRepository).findById(userId);
     }
 
@@ -314,6 +318,134 @@ class UserServiceImplTest {
         assertTrue(result.getPermissions().isEmpty());
         assertTrue(result.getRoles().isEmpty());
         verify(appUserRepository).findById(userId);
+    }
+
+    @DisplayName("updateUser successfully updates provided fields only")
+    @Test
+    void test_update_user_partial_update() {
+        Long userId = 1L;
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        AppUser existingUser = new AppUser();
+        existingUser.setId(userId);
+        existingUser.setUsername("oldusername");
+        existingUser.setFirstname("OldFirst");
+        existingUser.setLastname("OldLast");
+        existingUser.setEmail("old@example.com");
+        existingUser.setPassword("oldpassword");
+        existingUser.setEnabled(false);
+
+        AppUserUpdateDto updateDto = new AppUserUpdateDto();
+        updateDto.setFirstname("NewFirst");
+        // Note: lastname not set - should remain unchanged
+
+        when(appUserRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(appUserRepository.saveAndFlush(any(AppUser.class))).thenReturn(existingUser);
+
+        boolean result = userService.updateUser(userId, updateDto, response);
+
+        assertTrue(result);
+        assertEquals("NewFirst", existingUser.getFirstname());
+        // Unchanged fields
+        assertEquals("OldLast", existingUser.getLastname());
+        assertEquals("old@example.com", existingUser.getEmail());
+        assertEquals("oldusername", existingUser.getUsername());
+        assertEquals("oldpassword", existingUser.getPassword());
+        assertFalse(existingUser.isEnabled()); // Should remain unchanged
+        verify(appUserRepository).saveAndFlush(existingUser);
+    }
+
+    @DisplayName("updateUser returns false and sets 404 when user not found")
+    @Test
+    void test_update_user_not_found() {
+        Long userId = 999L;
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AppUserUpdateDto updateDto = new AppUserUpdateDto();
+        updateDto.setFirstname("NewFirst");
+
+        when(appUserRepository.findById(userId)).thenReturn(Optional.empty());
+
+        boolean result = userService.updateUser(userId, updateDto, response);
+
+        assertFalse(result);
+        assertEquals(MockHttpServletResponse.SC_NOT_FOUND, response.getStatus());
+        verify(appUserRepository, org.mockito.Mockito.never()).saveAndFlush(any());
+    }
+
+    @DisplayName("updateUser updates lastname correctly")
+    @Test
+    void test_update_user_lastname() {
+        Long userId = 1L;
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        AppUser existingUser = new AppUser();
+        existingUser.setId(userId);
+        existingUser.setFirstname("OldFirst");
+        existingUser.setLastname("OldLast");
+
+        AppUserUpdateDto updateDto = new AppUserUpdateDto();
+        updateDto.setLastname("NewLast");
+
+        when(appUserRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(appUserRepository.saveAndFlush(any(AppUser.class))).thenReturn(existingUser);
+
+        boolean result = userService.updateUser(userId, updateDto, response);
+
+        assertTrue(result);
+        assertEquals("NewLast", existingUser.getLastname());
+        assertEquals("OldFirst", existingUser.getFirstname()); // Should remain unchanged
+        verify(appUserRepository).saveAndFlush(existingUser);
+    }
+
+    @DisplayName("updateUser updates both firstname and lastname when both are provided")
+    @Test
+    void test_update_user_both_names() {
+        Long userId = 1L;
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        AppUser existingUser = new AppUser();
+        existingUser.setId(userId);
+        existingUser.setFirstname("OldFirst");
+        existingUser.setLastname("OldLast");
+
+        AppUserUpdateDto updateDto = new AppUserUpdateDto();
+        updateDto.setFirstname("NewFirst");
+        updateDto.setLastname("NewLast");
+
+        when(appUserRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(appUserRepository.saveAndFlush(any(AppUser.class))).thenReturn(existingUser);
+
+        boolean result = userService.updateUser(userId, updateDto, response);
+
+        assertTrue(result);
+        assertEquals("NewFirst", existingUser.getFirstname());
+        assertEquals("NewLast", existingUser.getLastname());
+        verify(appUserRepository).saveAndFlush(existingUser);
+    }
+
+    @DisplayName("updateUser handles null values correctly (no update)")
+    @Test
+    void test_update_user_null_values() {
+        Long userId = 1L;
+        MockHttpServletResponse response = new MockHttpServletResponse();
+
+        AppUser existingUser = new AppUser();
+        existingUser.setId(userId);
+        existingUser.setFirstname("OldFirst");
+        existingUser.setLastname("OldLast");
+
+        AppUserUpdateDto updateDto = new AppUserUpdateDto();
+        // Both firstname and lastname are null - should not update anything
+
+        when(appUserRepository.findById(userId)).thenReturn(Optional.of(existingUser));
+        when(appUserRepository.saveAndFlush(any(AppUser.class))).thenReturn(existingUser);
+
+        boolean result = userService.updateUser(userId, updateDto, response);
+
+        assertTrue(result);
+        assertEquals("OldFirst", existingUser.getFirstname()); // Should remain unchanged
+        assertEquals("OldLast", existingUser.getLastname()); // Should remain unchanged
+        verify(appUserRepository).saveAndFlush(existingUser);
     }
 
     private Permission permission(String code) {
