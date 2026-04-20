@@ -18,13 +18,16 @@
  */
 package org.apache.fineract.organisation.permission;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 /**
  * Immutable representation of permissions
  */
 public class PermissionData {
 
     @SuppressWarnings("unused")
-    private String grouping;
+    @JsonProperty("grouping")
+    private String module;
     @SuppressWarnings("unused")
     private String code;
     @SuppressWarnings("unused")
@@ -34,12 +37,12 @@ public class PermissionData {
     @SuppressWarnings("unused")
     private Boolean selected;
 
-    public String getGrouping() {
-        return grouping;
+    public String getModule() {
+        return module;
     }
 
-    public void setGrouping(String grouping) {
-        this.grouping = grouping;
+    public void setModule(String module) {
+        this.module = module;
     }
 
     public String getCode() {
@@ -80,14 +83,14 @@ public class PermissionData {
         return new PermissionData(null, permissionCode, null, null, isSelected);
     }
 
-    public static PermissionData instance(final String grouping, final String code, final String entityName, final String actionName,
+    public static PermissionData instance(final String module, final String code, final String entityName, final String actionName,
             final Boolean selected) {
-        return new PermissionData(grouping, code, entityName, actionName, selected);
+        return new PermissionData(module, code, entityName, actionName, selected);
     }
 
-    public PermissionData(final String grouping, final String code, final String entityName, final String actionName,
+    public PermissionData(final String module, final String code, final String entityName, final String actionName,
             final Boolean selected) {
-        this.grouping = grouping;
+        this.module = module;
         this.code = code;
         this.entityName = entityName;
         this.actionName = actionName;

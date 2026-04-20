@@ -19,6 +19,7 @@
 package org.apache.fineract.organisation.permission;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import org.apache.fineract.config.CustomAuditingEntityListener;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
 import org.apache.fineract.organisation.role.Role;
@@ -38,8 +39,9 @@ import java.util.Objects;
 @EntityListeners(CustomAuditingEntityListener.class)
 public class Permission extends AbstractPersistableCustom<Long> {
 
-    @Column(name = "`grouping`", nullable = false, length = 45)
-    private String grouping;
+    @Column(name = "module", nullable = false, length = 45)
+    @JsonProperty("grouping")
+    private String module;
 
     @Column(name = "code", nullable = false, length = 100)
     private String code;
@@ -68,12 +70,12 @@ public class Permission extends AbstractPersistableCustom<Long> {
         this.roles = roles;
     }
 
-    public String getGrouping() {
-        return grouping;
+    public String getModule() {
+        return module;
     }
 
-    public void setGrouping(String grouping) {
-        this.grouping = grouping;
+    public void setModule(String module) {
+        this.module = module;
     }
 
     public String getCode() {

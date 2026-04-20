@@ -15,64 +15,52 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /**
  * Tests for the Permission entity changes related to MySQL 8.0 compatibility.
  * <p>
- * MySQL 8.0 made {@code GROUPING} a reserved keyword, so the JPA {@code @Column}
- * annotation must use backtick-escaped column name ({@code `grouping`}) to generate
- * valid SQL on both MySQL 5.7 and 8.0.
+ * MySQL 8.0 made {@code GROUPING} a reserved keyword, so the column was renamed
+ * from {@code grouping} to {@code module} to avoid conflicts.
  */
 class PermissionEntityTest {
 
-    @DisplayName("grouping field @Column name must be backtick-escaped for MySQL 8.0 reserved keyword")
+    @DisplayName("module field @Column name must map to 'module' for MySQL 8.0 compatibility")
     @Test
-    void testGroupingColumnNameIsBacktickEscaped() throws NoSuchFieldException {
-        // Arrange
-        Field groupingField = Permission.class.getDeclaredField("grouping");
-        Column columnAnnotation = groupingField.getAnnotation(Column.class);
+    void testModuleColumnName() throws NoSuchFieldException {
+        Field moduleField = Permission.class.getDeclaredField("module");
+        Column columnAnnotation = moduleField.getAnnotation(Column.class);
 
-        // Assert
-        assertNotNull(columnAnnotation, "@Column annotation must be present on 'grouping' field");
-        assertEquals("`grouping`", columnAnnotation.name(),
-                "Column name must be backtick-escaped because 'grouping' is a reserved keyword in MySQL 8.0");
+        assertNotNull(columnAnnotation, "@Column annotation must be present on 'module' field");
+        assertEquals("module", columnAnnotation.name(),
+                "Column name must be 'module' (renamed from 'grouping' which is a reserved keyword in MySQL 8.0)");
     }
 
-    @DisplayName("grouping field @Column must be non-nullable with max length 45")
+    @DisplayName("module field @Column must be non-nullable with max length 45")
     @Test
-    void testGroupingColumnConstraints() throws NoSuchFieldException {
-        // Arrange
-        Field groupingField = Permission.class.getDeclaredField("grouping");
-        Column columnAnnotation = groupingField.getAnnotation(Column.class);
+    void testModuleColumnConstraints() throws NoSuchFieldException {
+        Field moduleField = Permission.class.getDeclaredField("module");
+        Column columnAnnotation = moduleField.getAnnotation(Column.class);
 
-        // Assert
         assertNotNull(columnAnnotation);
-        assertFalse(columnAnnotation.nullable(), "grouping column must be non-nullable");
-        assertEquals(45, columnAnnotation.length(), "grouping column length must be 45");
+        assertFalse(columnAnnotation.nullable(), "module column must be non-nullable");
+        assertEquals(45, columnAnnotation.length(), "module column length must be 45");
     }
 
-    @DisplayName("grouping getter and setter work correctly")
+    @DisplayName("module getter and setter work correctly")
     @Test
-    void testGroupingGetterSetter() {
-        // Arrange
+    void testModuleGetterSetter() {
         Permission permission = new Permission();
-
-        // Act
-        permission.setGrouping("authorisation");
-
-        // Assert
-        assertEquals("authorisation", permission.getGrouping());
+        permission.setModule("authorisation");
+        assertEquals("authorisation", permission.getModule());
     }
 
-    @DisplayName("Permission entity can be fully constructed with grouping field")
+    @DisplayName("Permission entity can be fully constructed with module field")
     @Test
-    void testPermissionEntityWithGrouping() {
-        // Arrange
+    void testPermissionEntityWithModule() {
         Permission permission = new Permission();
-        permission.setGrouping("special");
+        permission.setModule("special");
         permission.setCode("READ_TRANSFER");
         permission.setEntityName("TRANSFER");
         permission.setActionName("READ");
         permission.setCanMakerChecker(false);
 
-        // Assert
-        assertEquals("special", permission.getGrouping());
+        assertEquals("special", permission.getModule());
         assertEquals("READ_TRANSFER", permission.getCode());
         assertEquals("TRANSFER", permission.getEntityName());
         assertEquals("READ", permission.getActionName());
@@ -90,23 +78,22 @@ class PermissionEntityTest {
         assertTrue(permission.hasCode("Read_Transfer"));
     }
 
-    @DisplayName("Non-reserved-keyword columns do not have backtick escaping")
+    @DisplayName("Non-reserved-keyword columns are named normally")
     @Test
     void testOtherColumnsNotBacktickEscaped() throws NoSuchFieldException {
-        // Verify that only 'grouping' is backtick-escaped, not other columns
         Field codeField = Permission.class.getDeclaredField("code");
         Column codeColumn = codeField.getAnnotation(Column.class);
         assertNotNull(codeColumn);
-        assertEquals("code", codeColumn.name(), "Non-reserved column 'code' should not be backtick-escaped");
+        assertEquals("code", codeColumn.name());
 
         Field entityNameField = Permission.class.getDeclaredField("entityName");
         Column entityNameColumn = entityNameField.getAnnotation(Column.class);
         assertNotNull(entityNameColumn);
-        assertEquals("entity_name", entityNameColumn.name(), "Non-reserved column 'entity_name' should not be backtick-escaped");
+        assertEquals("entity_name", entityNameColumn.name());
 
         Field actionNameField = Permission.class.getDeclaredField("actionName");
         Column actionNameColumn = actionNameField.getAnnotation(Column.class);
         assertNotNull(actionNameColumn);
-        assertEquals("action_name", actionNameColumn.name(), "Non-reserved column 'action_name' should not be backtick-escaped");
+        assertEquals("action_name", actionNameColumn.name());
     }
 }

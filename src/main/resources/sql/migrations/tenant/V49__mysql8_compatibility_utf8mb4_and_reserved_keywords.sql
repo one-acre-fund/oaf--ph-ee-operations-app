@@ -1,8 +1,13 @@
 --
 -- MySQL 8.0 Compatibility Migration
 -- 1. Convert all tables from utf8/utf8mb3 to utf8mb4 for full Unicode support
--- 2. Escape 'grouping' column name with backticks (reserved keyword in MySQL 8.0)
+-- 2. Rename 'grouping' column to 'module' (grouping is a reserved keyword in MySQL 8.0)
 --
+
+-- ============================================================
+-- ISSUE 2: Rename 'grouping' column to 'module' (reserved keyword in MySQL 8.0)
+-- ============================================================
+ALTER TABLE `m_permission` CHANGE COLUMN `grouping` `module` VARCHAR(45) NOT NULL;
 
 -- ============================================================
 -- ISSUE 1: Convert charset from utf8 (utf8mb3) to utf8mb4

@@ -35,9 +35,9 @@ public interface PermissionRepository extends JpaRepository<Permission, Long> {
     @Query("SELECT DISTINCT p.actionName FROM Permission p")
     List<String> findDistinctActionNames();
     
-    @Query("SELECT new org.apache.fineract.organisation.permission.PermissionData(p.grouping, p.code, p.entityName, p.actionName, " +
+    @Query("SELECT new org.apache.fineract.organisation.permission.PermissionData(p.module, p.code, p.entityName, p.actionName, " +
            "CASE WHEN EXISTS (SELECT 1 FROM Role r JOIN r.permissions rp WHERE r.id = :roleId AND rp.id = p.id) THEN true ELSE false END) " +
            "FROM Permission p " +
-           "ORDER BY p.grouping, p.code")
+           "ORDER BY p.module, p.code")
     List<PermissionData> findAllPermissionsWithRoleSelection(@Param("roleId") Long roleId);
 }
