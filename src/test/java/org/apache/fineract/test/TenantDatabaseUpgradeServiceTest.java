@@ -34,6 +34,7 @@ class TenantDatabaseUpgradeServiceTest {
         ReflectionTestUtils.setField(service, "username", "user");
         ReflectionTestUtils.setField(service, "password", "pass");
         ReflectionTestUtils.setField(service, "tenants", Collections.singletonList("tenant1"));
+        ReflectionTestUtils.setField(service, "flywayRepairOnStartup", false);
 
         when(mockConn.createStatement()).thenReturn(mockStmt);
         Mockito.doReturn(mockConn)
