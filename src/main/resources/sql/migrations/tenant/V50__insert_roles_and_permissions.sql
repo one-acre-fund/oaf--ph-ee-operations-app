@@ -19,35 +19,35 @@ FROM (SELECT 'super_user'                                      AS name,
              0,
              CAST(DATE (NOW()) AS DATETIME),
              CAST(DATE (NOW()) AS DATETIME),
-             'caroline.kamondia@oneacrefund.org'
+             'migration'
       UNION ALL
       SELECT 'global_cdm',
              'Role to be assigned to global CDM teams',
              0,
              CAST(DATE (NOW()) AS DATETIME),
              CAST(DATE (NOW()) AS DATETIME),
-             'caroline.kamondia@oneacrefund.org'
+             'migration'
       UNION ALL
       SELECT 'country_cdm',
              'Role to be assigned to the back office biz ops team',
              0,
              CAST(DATE (NOW()) AS DATETIME),
              CAST(DATE (NOW()) AS DATETIME),
-             'caroline.kamondia@oneacrefund.org'
+             'migration'
       UNION ALL
       SELECT 'ce_agent',
              'Role to be assigned to country customer experience team',
              0,
              CAST(DATE (NOW()) AS DATETIME),
              CAST(DATE (NOW()) AS DATETIME),
-             'caroline.kamondia@oneacrefund.org'
+             'migration'
       UNION ALL
       SELECT 'audit_user',
              'Role to be assigned to country audit user.',
              0,
              CAST(DATE (NOW()) AS DATETIME),
              CAST(DATE (NOW()) AS DATETIME),
-             'caroline.kamondia@oneacrefund.org') AS new_roles
+             'migration') AS new_roles
 WHERE NOT EXISTS (SELECT 1
                   FROM m_role
                   WHERE name = new_roles.name);
