@@ -2,6 +2,7 @@ Release Notes
 
 
 ## Version 1.1.14 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
         * Multi-tenancy
             * [CP-3931] - Add indexes on all tenants db tables
 
