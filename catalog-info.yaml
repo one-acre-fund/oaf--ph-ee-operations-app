@@ -47,7 +47,5 @@ spec:
   system: operations
   providesApis:
     - operations-transaction-api
-  consumesApis:
-    - zeebe-gateway-grpc-api
   dependsOn:
     - resource:default/paymenthub-mysql
