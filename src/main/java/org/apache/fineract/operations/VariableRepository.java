@@ -11,8 +11,15 @@ public interface VariableRepository extends CrudRepository<Variable, Long> {
 
     List<Variable> findByWorkflowInstanceKeyOrderByTimestamp(Long workflowInstanceKey);
 
+    List<Variable> findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(Long workflowInstanceKey, Long zeebeGeneration);
+
     @Query("SELECT v from Variable v WHERE v.workflowInstanceKey=:workflowInstanceKey and v.name=:name")
     Optional<Variable> findByWorkflowInstanceKeyAndVariableName(@Param("name") String name,
                                                       @Param("workflowInstanceKey")  Long workflowInstanceKey);
+
+    @Query("SELECT v from Variable v WHERE v.workflowInstanceKey=:workflowInstanceKey and v.zeebeGeneration=:zeebeGeneration and v.name=:name")
+    Optional<Variable> findByWorkflowInstanceKeyAndZeebeGenerationAndVariableName(@Param("name") String name,
+                                                                                    @Param("workflowInstanceKey") Long workflowInstanceKey,
+                                                                                    @Param("zeebeGeneration") Long zeebeGeneration);
 
 }

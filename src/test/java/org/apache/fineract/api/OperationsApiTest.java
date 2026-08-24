@@ -144,6 +144,7 @@ class OperationsApiTest {
     void test_transfer_details_success() {
         Long workflowInstanceKey = 123L;
         Transfer transfer = new Transfer(workflowInstanceKey);
+        transfer.setZeebeGeneration(1L);
         List<Task> tasks = new ArrayList<>();
         tasks.add(new Task());
         tasks.add(new Task());
@@ -151,9 +152,9 @@ class OperationsApiTest {
         variables.add(new Variable());
         variables.add(new Variable());
 
-        when(transferRepository.findFirstByWorkflowInstanceKey(workflowInstanceKey)).thenReturn(transfer);
-        when(taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey)).thenReturn(tasks);
-        when(variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey)).thenReturn(variables);
+        when(transferRepository.findTopByWorkflowInstanceKeyOrderByZeebeGenerationDesc(workflowInstanceKey)).thenReturn(transfer);
+        when(taskRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(workflowInstanceKey, transfer.getZeebeGeneration())).thenReturn(tasks);
+        when(variableRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(workflowInstanceKey, transfer.getZeebeGeneration())).thenReturn(variables);
 
         TransferDetail result = operationsApi.transferDetails(workflowInstanceKey);
 
@@ -168,9 +169,9 @@ class OperationsApiTest {
     void test_transfer_details_non_existent_key() {
         Long workflowInstanceKey = 999L;
 
-        when(transferRepository.findFirstByWorkflowInstanceKey(workflowInstanceKey)).thenReturn(null);
-        when(taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey)).thenReturn(new ArrayList<>());
-        when(variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey)).thenReturn(new ArrayList<>());
+        when(transferRepository.findTopByWorkflowInstanceKeyOrderByZeebeGenerationDesc(workflowInstanceKey)).thenReturn(null);
+        when(taskRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(eq(workflowInstanceKey), anyLong())).thenReturn(new ArrayList<>());
+        when(variableRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(eq(workflowInstanceKey), anyLong())).thenReturn(new ArrayList<>());
 
         TransferDetail result = operationsApi.transferDetails(workflowInstanceKey);
 
@@ -185,12 +186,13 @@ class OperationsApiTest {
     void test_transaction_request_details_valid_key() {
         Long workflowInstanceKey = 123L;
         TransactionRequest transactionRequest = new TransactionRequest();
+        transactionRequest.setZeebeGeneration(2L);
         List<Task> tasks = new ArrayList<>();
         List<Variable> variables = new ArrayList<>();
 
-        when(transactionRequestRepository.findFirstByWorkflowInstanceKey(workflowInstanceKey)).thenReturn(transactionRequest);
-        when(taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey)).thenReturn(tasks);
-        when(variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey)).thenReturn(variables);
+        when(transactionRequestRepository.findTopByWorkflowInstanceKeyOrderByZeebeGenerationDesc(workflowInstanceKey)).thenReturn(transactionRequest);
+        when(taskRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(workflowInstanceKey, transactionRequest.getZeebeGeneration())).thenReturn(tasks);
+        when(variableRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(workflowInstanceKey, transactionRequest.getZeebeGeneration())).thenReturn(variables);
 
         TransactionRequestDetail result = operationsApi.transactionRequestDetails(workflowInstanceKey);
 
@@ -205,9 +207,9 @@ class OperationsApiTest {
     void test_transaction_request_details_invalid_key() {
         Long workflowInstanceKey = 999L;
 
-        when(transactionRequestRepository.findFirstByWorkflowInstanceKey(workflowInstanceKey)).thenReturn(null);
-        when(taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey)).thenReturn(new ArrayList<>());
-        when(variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey)).thenReturn(new ArrayList<>());
+        when(transactionRequestRepository.findTopByWorkflowInstanceKeyOrderByZeebeGenerationDesc(workflowInstanceKey)).thenReturn(null);
+        when(taskRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(eq(workflowInstanceKey), anyLong())).thenReturn(new ArrayList<>());
+        when(variableRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(eq(workflowInstanceKey), anyLong())).thenReturn(new ArrayList<>());
 
         TransactionRequestDetail result = operationsApi.transactionRequestDetails(workflowInstanceKey);
 
@@ -225,8 +227,10 @@ class OperationsApiTest {
         String businessKeyType = "validType";
         BusinessKey businessKey1 = new BusinessKey();
         businessKey1.setWorkflowInstanceKey(1L);
+        businessKey1.setZeebeGeneration(0L);
         BusinessKey businessKey2 = new BusinessKey();
         businessKey2.setWorkflowInstanceKey(2L);
+        businessKey2.setZeebeGeneration(1L);
         List<BusinessKey> businessKeys = Arrays.asList(businessKey1, businessKey2);
 
         Variable variable1 = new Variable();
@@ -237,8 +241,8 @@ class OperationsApiTest {
         List<Variable> variables2 = Arrays.asList(variable2);
 
         when(businessKeyRepository.findByBusinessKeyAndBusinessKeyType(businessKey, businessKeyType)).thenReturn(businessKeys);
-        when(variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(1L)).thenReturn(variables1);
-        when(variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(2L)).thenReturn(variables2);
+        when(variableRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(1L, businessKey1.getZeebeGeneration())).thenReturn(variables1);
+        when(variableRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(2L, businessKey2.getZeebeGeneration())).thenReturn(variables2);
 
         List<List<Variable>> result = operationsApi.variables(businessKey, businessKeyType);
 
@@ -272,12 +276,13 @@ class OperationsApiTest {
         String businessKeyType = "validBusinessKeyType";
         BusinessKey businessKey1 = new BusinessKey();
         businessKey1.setWorkflowInstanceKey(1L);
+        businessKey1.setZeebeGeneration(0L);
         List<BusinessKey> businessKeys = Arrays.asList(businessKey1);
         Task task = new Task();
         List<Task> tasks = Arrays.asList(task);
 
         when(businessKeyRepository.findByBusinessKeyAndBusinessKeyType(businessKey, businessKeyType)).thenReturn(businessKeys);
-        when(taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(1L)).thenReturn(tasks);
+        when(taskRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(1L, businessKey1.getZeebeGeneration())).thenReturn(tasks);
 
         // Act
         List<List<Task>> result = operationsApi.tasks(businessKey, businessKeyType);

@@ -156,8 +156,10 @@ public class BatchApi {
         BigDecimal failedAmount = BigDecimal.ZERO;
 
         for (Transfer transfer : transfers) {
-            Optional<Variable> variable = variableRepository.findByWorkflowInstanceKeyAndVariableName("paymentMode",
-                    transfer.getWorkflowInstanceKey());
+            Optional<Variable> variable = variableRepository.findByWorkflowInstanceKeyAndZeebeGenerationAndVariableName(
+                    "paymentMode",
+                    transfer.getWorkflowInstanceKey(),
+                    transfer.getZeebeGeneration());
             if (variable.isPresent()) {
                 // this will prevent 2x count of variables by eliminating data from transfers table
                 if (paymentModeConfig.getByMode(strip(variable.get().getValue()))

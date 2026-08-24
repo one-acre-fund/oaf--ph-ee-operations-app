@@ -1,6 +1,11 @@
 Release Notes
 
 
+## Version 1.1.15 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * Database
+            * [FD-1782] - Improve transactions uniqueness check to avoid duplicate transactions being created in the database
+
 ## Version 1.1.14 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * Multi-tenancy

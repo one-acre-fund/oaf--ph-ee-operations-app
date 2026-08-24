@@ -144,18 +144,26 @@ public class OperationsApi {
     @GetMapping("/transfer/{workflowInstanceKey}")
     public TransferDetail transferDetails(@PathVariable Long workflowInstanceKey) {
         ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.transferResourceNameForPermissions);
-        Transfer transfer = transferRepository.findFirstByWorkflowInstanceKey(workflowInstanceKey);
-        List<Task> tasks = taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey);
-        List<Variable> variables = variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey);
+        Transfer transfer = transferRepository.findTopByWorkflowInstanceKeyOrderByZeebeGenerationDesc(workflowInstanceKey);
+        List<Task> tasks = transfer == null
+                ? new java.util.ArrayList<>()
+                : taskRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(workflowInstanceKey, transfer.getZeebeGeneration());
+        List<Variable> variables = transfer == null
+                ? new java.util.ArrayList<>()
+                : variableRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(workflowInstanceKey, transfer.getZeebeGeneration());
         return new TransferDetail(transfer, tasks, variables);
     }
 
     @GetMapping("/transactionRequest/{workflowInstanceKey}")
     public TransactionRequestDetail transactionRequestDetails(@PathVariable Long workflowInstanceKey) {
         ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.transactionRequestsResourceNameForPermissions);
-        TransactionRequest transactionRequest = transactionRequestRepository.findFirstByWorkflowInstanceKey(workflowInstanceKey);
-        List<Task> tasks = taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey);
-        List<Variable> variables = variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(workflowInstanceKey);
+        TransactionRequest transactionRequest = transactionRequestRepository.findTopByWorkflowInstanceKeyOrderByZeebeGenerationDesc(workflowInstanceKey);
+        List<Task> tasks = transactionRequest == null
+                ? new java.util.ArrayList<>()
+                : taskRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(workflowInstanceKey, transactionRequest.getZeebeGeneration());
+        List<Variable> variables = transactionRequest == null
+                ? new java.util.ArrayList<>()
+                : variableRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(workflowInstanceKey, transactionRequest.getZeebeGeneration());
         return new TransactionRequestDetail(transactionRequest, tasks, variables);
     }
 
@@ -166,7 +174,8 @@ public class OperationsApi {
     ) {
         ThreadLocalContextUtil.getCurrentUser().validateHasReadPermission(this.transferResourceNameForPermissions);
         return loadTransfers(businessKey, businessKeyType).stream()
-                .map(transfer -> variableRepository.findByWorkflowInstanceKeyOrderByTimestamp(transfer.getWorkflowInstanceKey()))
+                .map(transfer -> variableRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(
+                        transfer.getWorkflowInstanceKey(), transfer.getZeebeGeneration()))
                 .collect(Collectors.toList());
     }
 
@@ -176,7 +185,8 @@ public class OperationsApi {
             @RequestParam(value = "businessKeyType") String businessKeyType
     ) {
         return loadTransfers(businessKey, businessKeyType).stream()
-                .map(transfer -> taskRepository.findByWorkflowInstanceKeyOrderByTimestamp(transfer.getWorkflowInstanceKey()))
+                .map(transfer -> taskRepository.findByWorkflowInstanceKeyAndZeebeGenerationOrderByTimestamp(
+                        transfer.getWorkflowInstanceKey(), transfer.getZeebeGeneration()))
                 .collect(Collectors.toList());
     }
 
