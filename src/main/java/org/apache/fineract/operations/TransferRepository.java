@@ -11,6 +11,8 @@ public interface TransferRepository extends JpaRepository<Transfer, Long>, JpaSp
 
     Transfer findFirstByWorkflowInstanceKey(Long workflowInstanceKey);
 
+    Transfer findTopByWorkflowInstanceKeyOrderByZeebeGenerationDesc(Long workflowInstanceKey);
+
     Transfer findFirstByTransactionIdAndDirection(String transactionId, String direction);
 
     List<Transfer> findAllByBatchId(String batchId);

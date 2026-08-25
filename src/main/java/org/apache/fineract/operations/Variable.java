@@ -18,6 +18,9 @@ public class Variable extends AbstractPersistableCustom<Long> {
     @Index(name = "idx_workflowInstanceKey")
     private Long workflowInstanceKey;
 
+    @Column(name = "ZEEBE_GENERATION")
+    private Long zeebeGeneration;
+
     @Column(name = "TIMESTAMP")
     private Long timestamp;
 
@@ -28,8 +31,12 @@ public class Variable extends AbstractPersistableCustom<Long> {
     @Column(name = "VALUE")
     private String value;
 
-    @JoinColumn(name = "WORKFLOW_INSTANCE_KEY", insertable=false, updatable=false,
-            referencedColumnName = "WORKFLOW_INSTANCE_KEY")
+    @JoinColumns({
+            @JoinColumn(name = "WORKFLOW_INSTANCE_KEY", insertable = false, updatable = false,
+                    referencedColumnName = "WORKFLOW_INSTANCE_KEY"),
+            @JoinColumn(name = "ZEEBE_GENERATION", insertable = false, updatable = false,
+                    referencedColumnName = "ZEEBE_GENERATION")
+    })
     @ManyToOne()
     private TransactionRequest transactionRequest;
 
@@ -56,6 +63,14 @@ public class Variable extends AbstractPersistableCustom<Long> {
 
     public void setWorkflowInstanceKey(Long workflowInstanceKey) {
         this.workflowInstanceKey = workflowInstanceKey;
+    }
+
+    public Long getZeebeGeneration() {
+        return zeebeGeneration;
+    }
+
+    public void setZeebeGeneration(Long zeebeGeneration) {
+        this.zeebeGeneration = zeebeGeneration;
     }
 
     public Long getTimestamp() {

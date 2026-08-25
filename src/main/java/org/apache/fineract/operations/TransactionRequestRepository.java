@@ -11,8 +11,11 @@ public interface TransactionRequestRepository extends JpaRepository<TransactionR
 
     TransactionRequest findFirstByWorkflowInstanceKey(Long workflowInstanceKey);
 
+    TransactionRequest findTopByWorkflowInstanceKeyOrderByZeebeGenerationDesc(Long workflowInstanceKey);
+
     @Deprecated(forRemoval = true)
     @Query("SELECT tr FROM TransactionRequest tr INNER JOIN Variable v ON tr.workflowInstanceKey = v.workflowInstanceKey" +
+            " AND tr.zeebeGeneration = v.zeebeGeneration" +
             " WHERE v.name=\"errorDescription\" and v.value IN :errorDescription")
     List<TransactionRequest> filterByErrorDescription(@Param("errorDescription") List<String> errorDescription);
 

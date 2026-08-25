@@ -19,6 +19,9 @@ public class Task extends AbstractPersistableCustom<Long> {
     private Long workflowKey;
     @Column(name = "WORKFLOW_INSTANCE_KEY")
     private Long workflowInstanceKey;
+
+    @Column(name = "ZEEBE_GENERATION")
+    private Long zeebeGeneration;
     @Column(name = "TIMESTAMP")
     private Long timestamp;
     @Column(name = "INTENT")
@@ -52,6 +55,14 @@ public class Task extends AbstractPersistableCustom<Long> {
 
     public void setWorkflowInstanceKey(Long workflowInstanceKey) {
         this.workflowInstanceKey = workflowInstanceKey;
+    }
+
+    public Long getZeebeGeneration() {
+        return zeebeGeneration;
+    }
+
+    public void setZeebeGeneration(Long zeebeGeneration) {
+        this.zeebeGeneration = zeebeGeneration;
     }
 
     public String getIntent() {

@@ -24,6 +24,9 @@ public class Transfer extends AbstractPersistableCustom<Long> {
     @JsonFormat(shape = JsonFormat.Shape.STRING)
     private Long workflowInstanceKey;
 
+    @Column(name = "ZEEBE_GENERATION")
+    private Long zeebeGeneration;
+
     @Column(name = "TRANSACTION_ID")
     private String transactionId;
 
@@ -90,7 +93,16 @@ public class Transfer extends AbstractPersistableCustom<Long> {
 
     public Transfer(Long workflowInstanceKey) {
         this.workflowInstanceKey = workflowInstanceKey;
+        this.zeebeGeneration = 0L;
         this.status = TransferStatus.IN_PROGRESS;
+    }
+
+    public Long getZeebeGeneration() {
+        return zeebeGeneration;
+    }
+
+    public void setZeebeGeneration(Long zeebeGeneration) {
+        this.zeebeGeneration = zeebeGeneration;
     }
 
     public Date getCompletedAt() {
