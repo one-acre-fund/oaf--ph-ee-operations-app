@@ -15,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 
 @Service
 @Qualifier("awsStorage")
@@ -36,15 +37,12 @@ public class AwsFileTransferImpl implements FileTransferService {
 
     @Override
     public byte[] downloadFile(String fileName, String bucketName) {
-        S3Object s3Object = s3Client.getObject(bucketName, fileName);
-        S3ObjectInputStream inputStream = s3Object.getObjectContent();
-        try {
-            byte[] content = IOUtils.toByteArray(inputStream);
-            return content;
+        try (S3Object s3Object = s3Client.getObject(bucketName, fileName);
+             S3ObjectInputStream inputStream = s3Object.getObjectContent()) {
+            return IOUtils.toByteArray(inputStream);
         } catch (IOException e) {
-            e.printStackTrace();
+            throw new UncheckedIOException("Error downloading file from S3", e);
         }
-        return null;
     }
 
     @Override

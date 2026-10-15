@@ -2,8 +2,11 @@ package org.apache.fineract.api;
 
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.apache.fineract.config.PaymentModeConfiguration;
+import org.apache.fineract.exception.BatchResultFileException;
 import org.apache.fineract.file.FileTransferService;
 import org.apache.fineract.operations.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,10 +15,18 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specifications;
 import org.springframework.web.bind.annotation.*;
-import java.io.BufferedWriter;
+import org.supercsv.io.CsvListWriter;
+import org.supercsv.io.ICsvListWriter;
+import org.supercsv.prefs.CsvPreference;
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.time.Instant;
+import java.time.format.DateTimeFormatter;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Date;
 import java.util.HashMap;
@@ -28,6 +39,8 @@ import static org.apache.fineract.core.service.OperatorUtils.strip;
 @SecurityRequirement(name = "BearerAuth")
 @RequestMapping("/api/v1")
 public class BatchApi {
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
+
     @Autowired
     private TransferRepository transferRepository;
 
@@ -226,7 +239,7 @@ public class BatchApi {
         ongoing += subBatchOngoing;
 
         if (batch.getResult_file() == null || (batch.getResult_file() != null && batch.getResult_file().isEmpty())) {
-            batch.setResult_file(createDetailsFile(transfers));
+            batch.setResult_file(createDetailsFile(batch.getBatchId(), transfers));
         }
         batch.setCompleted(completed);
         batch.setFailed(failed);
@@ -261,46 +274,40 @@ public class BatchApi {
         return response;
     }
 
-    private String createDetailsFile(List<Transfer> transfers) {
-        String CSV_SEPARATOR = ",";
-        File tempFile = new File(System.currentTimeMillis() + "_response.csv");
-        try (
-                FileWriter writer = new FileWriter(tempFile.getName());
-                BufferedWriter bw = new BufferedWriter(writer)) {
-            for (Transfer transfer : transfers)
-            {
-                StringBuffer oneLine = new StringBuffer();
-                oneLine.append(transfer.getTransactionId());
-                oneLine.append(CSV_SEPARATOR);
-                oneLine.append(transfer.getStatus().toString());
-                oneLine.append(CSV_SEPARATOR);
-                oneLine.append(transfer.getPayeeDfspId());
-                oneLine.append(CSV_SEPARATOR);
-                oneLine.append(transfer.getPayeePartyId());
-                oneLine.append(CSV_SEPARATOR);
-                oneLine.append(transfer.getAmsBusinessShortCode());
-                oneLine.append(CSV_SEPARATOR);
-                oneLine.append(transfer.getPayerPartyId());
-                oneLine.append(CSV_SEPARATOR);
-                oneLine.append(transfer.getAmount().toString());
-                oneLine.append(CSV_SEPARATOR);
-                oneLine.append(transfer.getCurrency());
-                oneLine.append(CSV_SEPARATOR);
-                oneLine.append(transfer.getErrorInformation());
-                oneLine.append(CSV_SEPARATOR);
-                oneLine.append(transfer.getStartedAt().toString());
-                oneLine.append(CSV_SEPARATOR);
-                oneLine.append(transfer.getCompletedAt().toString());
-                oneLine.append(CSV_SEPARATOR);
-                bw.write(oneLine.toString());
-                bw.newLine();
+    private String createDetailsFile(String batchId, List<Transfer> transfers) {
+        File tempFile = null;
+        try {
+            tempFile = Files.createTempFile("batch_result_", ".csv").toFile();
+            try (ICsvListWriter csvWriter = new CsvListWriter(
+                    new OutputStreamWriter(new FileOutputStream(tempFile), StandardCharsets.UTF_8),
+                    CsvPreference.STANDARD_PREFERENCE)) {
+                for (Transfer transfer : transfers) {
+                    csvWriter.write(
+                            transfer.getTransactionId(),
+                            transfer.getStatus(),
+                            transfer.getPayeeDfspId(),
+                            transfer.getPayeePartyId(),
+                            transfer.getAmsBusinessShortCode(),
+                            transfer.getPayerPartyId(),
+                            transfer.getAmount(),
+                            transfer.getCurrency(),
+                            transfer.getErrorInformation(),
+                            formatDate(transfer.getStartedAt()),
+                            formatDate(transfer.getCompletedAt()));
+                }
             }
-            bw.flush();
             return fileTransferService.uploadFile(tempFile, bucketName);
-        } catch (Exception e) {
-            System.err.format("Exception: %s%n", e);
+        } catch (IOException | RuntimeException e) {
+            throw new BatchResultFileException("Failed to create the result file for batch " + batchId, e);
+        } finally {
+            if (tempFile != null && tempFile.exists() && !tempFile.delete()) {
+                logger.warn("Could not delete temp file");
+            }
         }
-        return null;
+    }
+
+    private static String formatDate(Date date) {
+        return date == null ? null : DateTimeFormatter.ISO_INSTANT.format(Instant.ofEpochMilli(date.getTime()));
     }
 
 }
