@@ -1,0 +1,10 @@
+# Findings in git history that no PR can remove. Current files hold placeholders; the keys
+# themselves must be treated as leaked and rotated if they were ever real.
+# AWS access key pair committed 2022-04-29 (upstream code), replaced by placeholders later.
+28031c8e34fe3aa2f458f7f75ac9bcaaaae762e4:src/main/resources/application.yml:aws-access-token:59
+# AWS access key pair committed 2025-07-30 in application-keycloak.yml, now ${AWS_ACCESS_KEY}.
+2b70fab91026336d83dd812601a6dc72aa52e6e2:src/main/resources/application-keycloak.yml:aws-access-token:82
+# Example Authorization header in a comment of a class removed since (2022-11-10).
+61aec9ab09e06cd6227b17748d5af55e3ffc5d68:src/main/java/org/apache/fineract/config/WebSecurityConfiguration.java:curl-auth-header:38
+# Unused jwt.pem from the upstream initial commit (2020-06-17); the file is deleted, this is its history entry.
+cd4375533b764dc20978aeee7a80722f832b6cd2:src/main/resources/jwt.pem:private-key:1
