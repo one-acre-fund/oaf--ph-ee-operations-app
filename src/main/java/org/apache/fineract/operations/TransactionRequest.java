@@ -26,6 +26,11 @@ public class TransactionRequest extends AbstractPersistableCustom<Long> {
     @Column(name = "ZEEBE_GENERATION")
     private Long zeebeGeneration;
 
+    // Optimistic lock shared with ph-ee-importer-rdbms (FD-1931, tenant migration V53).
+    @Version
+    @Column(name = "VERSION")
+    private Long version;
+
     @Column(name = "TRANSACTION_ID")
     private String transactionId;
 
@@ -134,6 +139,14 @@ public class TransactionRequest extends AbstractPersistableCustom<Long> {
 
     public void setZeebeGeneration(Long zeebeGeneration) {
         this.zeebeGeneration = zeebeGeneration;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public String getTransactionId() {
