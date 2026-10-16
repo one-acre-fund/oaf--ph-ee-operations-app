@@ -15,6 +15,10 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Set;
 
 @Service
 @Qualifier("azureStorage")
@@ -22,6 +26,9 @@ import java.nio.file.Path;
         value="cloud.azure.enabled",
         havingValue = "true")
 public class AzureFileTransferImpl implements FileTransferService {
+    private static final FileAttribute<Set<PosixFilePermission>> OWNER_ONLY =
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
+
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
@@ -44,7 +51,7 @@ public class AzureFileTransferImpl implements FileTransferService {
     public byte[] downloadFile(String fileName, String bucketName) {
         Path temp = null;
         try {
-            temp = Files.createTempFile("azure_download_", ".tmp");
+            temp = Files.createTempFile("azure_download_", ".tmp", OWNER_ONLY);
             client.containerName(bucketName).blobName(fileName).buildClient().downloadToFile(temp.toString(), true);
             return Files.readAllBytes(temp);
         } catch (IOException e) {

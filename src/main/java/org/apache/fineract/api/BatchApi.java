@@ -18,13 +18,15 @@ import org.springframework.web.bind.annotation.*;
 import org.supercsv.io.CsvListWriter;
 import org.supercsv.io.ICsvListWriter;
 import org.supercsv.prefs.CsvPreference;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 import javax.servlet.http.HttpServletResponse;
@@ -32,6 +34,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.apache.fineract.core.service.OperatorUtils.strip;
 
@@ -39,6 +42,9 @@ import static org.apache.fineract.core.service.OperatorUtils.strip;
 @SecurityRequirement(name = "BearerAuth")
 @RequestMapping("/api/v1")
 public class BatchApi {
+    private static final FileAttribute<Set<PosixFilePermission>> OWNER_ONLY =
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
+
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
@@ -275,11 +281,11 @@ public class BatchApi {
     }
 
     private String createDetailsFile(String batchId, List<Transfer> transfers) {
-        File tempFile = null;
+        Path tempFile = null;
         try {
-            tempFile = Files.createTempFile("batch_result_", ".csv").toFile();
+            tempFile = Files.createTempFile("batch_result_", ".csv", OWNER_ONLY);
             try (ICsvListWriter csvWriter = new CsvListWriter(
-                    new OutputStreamWriter(new FileOutputStream(tempFile), StandardCharsets.UTF_8),
+                    new OutputStreamWriter(Files.newOutputStream(tempFile), StandardCharsets.UTF_8),
                     CsvPreference.STANDARD_PREFERENCE)) {
                 for (Transfer transfer : transfers) {
                     csvWriter.write(
@@ -296,12 +302,16 @@ public class BatchApi {
                             formatDate(transfer.getCompletedAt()));
                 }
             }
-            return fileTransferService.uploadFile(tempFile, bucketName);
+            return fileTransferService.uploadFile(tempFile.toFile(), bucketName);
         } catch (IOException | RuntimeException e) {
             throw new BatchResultFileException("Failed to create the result file for batch " + batchId, e);
         } finally {
-            if (tempFile != null && tempFile.exists() && !tempFile.delete()) {
-                logger.warn("Could not delete temp file");
+            if (tempFile != null) {
+                try {
+                    Files.deleteIfExists(tempFile);
+                } catch (IOException e) {
+                    logger.warn("Could not delete temp file", e);
+                }
             }
         }
     }
