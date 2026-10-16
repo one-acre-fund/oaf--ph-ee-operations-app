@@ -4,11 +4,10 @@ package org.apache.fineract.operations;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
+import org.apache.fineract.organisation.parent.VersionedPersistableCustom;
 import org.eclipse.persistence.annotations.Index;
 
 import javax.persistence.Column;
-import javax.persistence.Version;
 import javax.persistence.Entity;
 import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
@@ -18,7 +17,7 @@ import java.util.Date;
 
 @Entity
 @Table(name = "transfers")
-public class Transfer extends AbstractPersistableCustom<Long> {
+public class Transfer extends VersionedPersistableCustom {
 
     @Column(name = "WORKFLOW_INSTANCE_KEY")
     @Index(name = "idx_paymentProcessId")
@@ -28,10 +27,6 @@ public class Transfer extends AbstractPersistableCustom<Long> {
     @Column(name = "ZEEBE_GENERATION")
     private Long zeebeGeneration;
 
-    // Optimistic lock shared with ph-ee-importer-rdbms (FD-1931, tenant migration V53).
-    @Version
-    @Column(name = "VERSION")
-    private Long version;
 
     @Column(name = "TRANSACTION_ID")
     private String transactionId;
@@ -111,13 +106,6 @@ public class Transfer extends AbstractPersistableCustom<Long> {
         this.zeebeGeneration = zeebeGeneration;
     }
 
-    public Long getVersion() {
-        return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
-    }
 
     public Date getCompletedAt() {
         return completedAt;

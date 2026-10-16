@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
+import org.apache.fineract.organisation.parent.VersionedPersistableCustom;
 import javax.persistence.*;
 import java.math.BigDecimal;
 import java.util.Collection;
@@ -18,7 +18,7 @@ import static org.apache.fineract.operations.TransactionRequestState.IN_PROGRESS
 
 @Entity
 @Table(name = "transaction_requests")
-public class TransactionRequest extends AbstractPersistableCustom<Long> {
+public class TransactionRequest extends VersionedPersistableCustom {
 
     @Column(name = "WORKFLOW_INSTANCE_KEY")
     private String workflowInstanceKey;
@@ -26,10 +26,6 @@ public class TransactionRequest extends AbstractPersistableCustom<Long> {
     @Column(name = "ZEEBE_GENERATION")
     private Long zeebeGeneration;
 
-    // Optimistic lock shared with ph-ee-importer-rdbms (FD-1931, tenant migration V53).
-    @Version
-    @Column(name = "VERSION")
-    private Long version;
 
     @Column(name = "TRANSACTION_ID")
     private String transactionId;
@@ -141,13 +137,6 @@ public class TransactionRequest extends AbstractPersistableCustom<Long> {
         this.zeebeGeneration = zeebeGeneration;
     }
 
-    public Long getVersion() {
-        return version;
-    }
-
-    public void setVersion(Long version) {
-        this.version = version;
-    }
 
     public String getTransactionId() {
         return transactionId;
