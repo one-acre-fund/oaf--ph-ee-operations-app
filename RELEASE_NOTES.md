@@ -1,6 +1,11 @@
 Release Notes
 
 
+## Version 1.1.16 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * Batch Processing
+            * [FD-1929] - Make batch result CSV safe and stop swallowing file upload/download errors
+
 ## Version 1.1.15 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * Database
