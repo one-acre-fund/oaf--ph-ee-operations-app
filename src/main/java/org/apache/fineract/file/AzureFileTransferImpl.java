@@ -1,7 +1,6 @@
 package org.apache.fineract.file;
 
 import com.azure.storage.blob.BlobClientBuilder;
-import com.azure.storage.blob.models.BlobProperties;
 import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,8 +11,14 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.util.Set;
 
 @Service
 @Qualifier("azureStorage")
@@ -21,6 +26,9 @@ import java.nio.file.Paths;
         value="cloud.azure.enabled",
         havingValue = "true")
 public class AzureFileTransferImpl implements FileTransferService {
+    private static final FileAttribute<Set<PosixFilePermission>> OWNER_ONLY =
+            PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------"));
+
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Autowired
@@ -29,30 +37,34 @@ public class AzureFileTransferImpl implements FileTransferService {
     @Override
     public String uploadFile(File file, String bucketName) {
 
-        try {
-            String fileName = System.currentTimeMillis() + "_" + file.getName();
-            client.containerName(bucketName).blobName(fileName).buildClient().upload(FileUtils.openInputStream(file), file.length());
-            file.delete();
-            return fileName;
+        String fileName = System.currentTimeMillis() + "_" + file.getName();
+        try (InputStream inputStream = FileUtils.openInputStream(file)) {
+            client.containerName(bucketName).blobName(fileName).buildClient().upload(inputStream, file.length());
         } catch (IOException e) {
-            logger.error("Error uploading file to Azure", e);
+            throw new UncheckedIOException("Error uploading file to Azure", e);
         }
-
-        return null;
+        file.delete();
+        return fileName;
     }
 
     @Override
     public byte[] downloadFile(String fileName, String bucketName) {
+        Path temp = null;
         try {
-            File temp = new File("/temp/"+fileName);
-            BlobProperties properties = client.containerName(bucketName).blobName(fileName).buildClient().downloadToFile(temp.getPath());
-            byte[] content = Files.readAllBytes(Paths.get(temp.getPath()));
-            temp.delete();
-            return content;
-        } catch (Exception e) {
-            e.printStackTrace();
+            temp = Files.createTempFile("azure_download_", ".tmp", OWNER_ONLY);
+            client.containerName(bucketName).blobName(fileName).buildClient().downloadToFile(temp.toString(), true);
+            return Files.readAllBytes(temp);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Error downloading file from Azure", e);
+        } finally {
+            if (temp != null) {
+                try {
+                    Files.deleteIfExists(temp);
+                } catch (IOException e) {
+                    logger.warn("Could not delete temp file", e);
+                }
+            }
         }
-        return null;
     }
 
     @Override
