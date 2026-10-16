@@ -51,12 +51,12 @@ class AzureFileTransferImplTest {
         ReflectionTestUtils.setField(service, "client", builder);
     }
 
-    @DisplayName("uploadFile uploads a timestamp-prefixed blob, returns its name and deletes the local file")
     @AfterEach
     void tearDown() throws IOException {
         FileUtils.deleteDirectory(tempDir.toFile());
     }
 
+    @DisplayName("uploadFile uploads a timestamp-prefixed blob, returns its name and deletes the local file")
     @Test
     void testUploadFile() throws Exception {
         byte[] content = "a,b".getBytes(StandardCharsets.UTF_8);

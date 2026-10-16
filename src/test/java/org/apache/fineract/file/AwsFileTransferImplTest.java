@@ -44,12 +44,12 @@ class AwsFileTransferImplTest {
         ReflectionTestUtils.setField(service, "s3Client", s3Client);
     }
 
-    @DisplayName("uploadFile puts a timestamp-prefixed object, returns its URL and deletes the local file")
     @AfterEach
     void tearDown() throws IOException {
         FileUtils.deleteDirectory(tempDir.toFile());
     }
 
+    @DisplayName("uploadFile puts a timestamp-prefixed object, returns its URL and deletes the local file")
     @Test
     void testUploadFile() throws Exception {
         File file = Files.write(tempDir.resolve("result.csv"), "a,b".getBytes()).toFile();
