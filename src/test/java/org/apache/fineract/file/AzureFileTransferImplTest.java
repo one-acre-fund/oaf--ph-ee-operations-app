@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.mockito.MockedStatic;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.File;
@@ -22,6 +23,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -127,6 +129,42 @@ class AzureFileTransferImplTest {
                 () -> service.downloadFile("key.csv", CONTAINER));
         assertEquals("blob not found", ex.getMessage());
         assertFalse(Files.exists(Paths.get(pathCaptor.getValue())), "Temp file should be deleted on failure");
+    }
+
+    @DisplayName("downloadFile wraps a temp file creation failure without calling Azure")
+    @Test
+    void testDownloadFileTempFileCreationFailure() {
+        try (MockedStatic<Files> files = mockStatic(Files.class)) {
+            files.when(() -> Files.createTempFile(anyString(), anyString(), any()))
+                    .thenThrow(new IOException("disk full"));
+
+            UncheckedIOException ex = assertThrows(UncheckedIOException.class,
+                    () -> service.downloadFile("key.csv", CONTAINER));
+            assertEquals("Error downloading file from Azure", ex.getMessage());
+            files.verify(() -> Files.deleteIfExists(any()), never());
+        }
+        verify(blobClient, never()).downloadToFile(anyString(), anyBoolean());
+    }
+
+    @DisplayName("downloadFile still returns the bytes when the temp file cannot be deleted")
+    @Test
+    void testDownloadFileTempFileDeleteFailure() {
+        byte[] content = "file-content".getBytes(StandardCharsets.UTF_8);
+        Path temp = tempDir.resolve("azure_download_1.tmp");
+
+        byte[] result;
+        try (MockedStatic<Files> files = mockStatic(Files.class)) {
+            files.when(() -> Files.createTempFile(anyString(), anyString(), any())).thenReturn(temp);
+            files.when(() -> Files.readAllBytes(temp)).thenReturn(content);
+            files.when(() -> Files.deleteIfExists(temp)).thenThrow(new IOException("file locked"));
+
+            result = service.downloadFile("key.csv", CONTAINER);
+
+            files.verify(() -> Files.deleteIfExists(temp));
+        }
+
+        assertArrayEquals(content, result);
+        verify(blobClient).downloadToFile(temp.toString(), true);
     }
 
     @DisplayName("deleteFile deletes the blob")
