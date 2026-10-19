@@ -117,6 +117,17 @@ class TransactionRequestReaderTest {
     }
 
     @Test
+    @DisplayName("Ignores a filter with an empty or missing list, as the legacy export does")
+    void ignoresEmptyFilterList() throws IOException {
+        assertEquals(Arrays.asList("r3", "r2", "r1", "r5", "r6", "r4"),
+                read(criteria(Filter.TRANSACTIONID, Collections.emptyList())));
+        assertEquals(Arrays.asList("r3", "r2", "r1", "r5", "r6", "r4"),
+                read(criteria(Filter.ERRORDESCRIPTION, Collections.emptyList())));
+        assertEquals(Arrays.asList("r3", "r2", "r1", "r5", "r6", "r4"),
+                read(criteria(Filter.EXTERNALID, null)));
+    }
+
+    @Test
     @DisplayName("Restricts requests to the data scope")
     void appliesDataScope() throws IOException {
         ExportCriteria kesOnly = ExportCriteria.builder()

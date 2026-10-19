@@ -125,7 +125,9 @@ public abstract class JpaKeysetReader<T extends AbstractPersistableCustom<Long>>
         if (criteria.getStartTo() != null) {
             predicates.add(cb.lessThanOrEqualTo(startedAt, criteria.getStartTo()));
         }
+        // an empty filter list means "not filtered", as in the legacy exports; data scope is different (see addScope)
         criteria.getFilters().entrySet().stream()
+                .filter(filter -> filter.getValue() != null && !filter.getValue().isEmpty())
                 .map(filter -> filterPredicate(cb, query, root, filter.getKey(), filter.getValue()))
                 .forEach(predicates::add);
         predicates.addAll(scopePredicates(cb, root, criteria.getScope()));

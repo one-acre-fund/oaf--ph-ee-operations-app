@@ -120,6 +120,17 @@ class TransferReaderTest {
     }
 
     @Test
+    @DisplayName("Ignores a filter with an empty list, as the legacy export does")
+    void ignoresEmptyFilterList() throws IOException {
+        ExportCriteria criteria = ExportCriteria.builder()
+                .filters(filters(Filter.TRANSACTIONID, Collections.emptyList(), Filter.STATE,
+                        Collections.singletonList("completed")))
+                .build();
+
+        assertEquals(Arrays.asList("t4", "t3", "t1"), read(criteria));
+    }
+
+    @Test
     @DisplayName("Restricts rows to the data scope; an empty scope list matches nothing")
     void appliesDataScope() throws IOException {
         ExportCriteria ugxOnly = ExportCriteria.builder()
