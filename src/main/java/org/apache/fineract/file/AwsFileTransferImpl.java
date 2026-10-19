@@ -11,6 +11,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 
 @Service
@@ -42,5 +44,20 @@ public class AwsFileTransferImpl implements FileTransferService {
     @Override
     public void deleteFile(String fileName, String bucketName) {
         s3Client.deleteObject(bucketName, fileName);
+    }
+
+    @Override
+    public void uploadFile(String key, File file, String bucketName) {
+        s3Client.putObject(new PutObjectRequest(bucketName, key, file));
+    }
+
+    @Override
+    public void downloadFile(String key, String bucketName, OutputStream out) {
+        try (S3Object s3Object = s3Client.getObject(bucketName, key);
+             InputStream inputStream = s3Object.getObjectContent()) {
+            inputStream.transferTo(out);
+        } catch (IOException e) {
+            throw new UncheckedIOException("Error downloading file from S3", e);
+        }
     }
 }

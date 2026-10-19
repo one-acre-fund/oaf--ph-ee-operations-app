@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -96,6 +97,53 @@ class AwsFileTransferImplTest {
                 () -> service.downloadFile("key.csv", BUCKET));
         assertEquals("Error downloading file from S3", ex.getMessage());
         assertEquals("connection reset", ex.getCause().getMessage());
+    }
+
+    @DisplayName("uploadFile with a key puts the file under that key and leaves the local file to the caller")
+    @Test
+    void testUploadFileWithKey() throws Exception {
+        File file = Files.write(tempDir.resolve("export.csv"), "a,b".getBytes()).toFile();
+
+        service.uploadFile("exports/oaf/job-1.csv", file, BUCKET);
+
+        ArgumentCaptor<PutObjectRequest> request = ArgumentCaptor.forClass(PutObjectRequest.class);
+        verify(s3Client).putObject(request.capture());
+        assertEquals(BUCKET, request.getValue().getBucketName());
+        assertEquals("exports/oaf/job-1.csv", request.getValue().getKey());
+        assertEquals(file, request.getValue().getFile());
+        assertTrue(file.exists(), "Local file is left for the caller");
+    }
+
+    @DisplayName("downloadFile with an output stream copies the object without loading it in memory")
+    @Test
+    void testDownloadFileToStream() {
+        byte[] content = "a,b\r\n1,2\r\n".getBytes(StandardCharsets.UTF_8);
+        S3Object s3Object = mock(S3Object.class);
+        when(s3Object.getObjectContent()).thenReturn(s3Stream(new ByteArrayInputStream(content)));
+        when(s3Client.getObject(BUCKET, "exports/oaf/job-1.csv")).thenReturn(s3Object);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        service.downloadFile("exports/oaf/job-1.csv", BUCKET, out);
+
+        assertArrayEquals(content, out.toByteArray());
+    }
+
+    @DisplayName("downloadFile with an output stream wraps read failures in UncheckedIOException")
+    @Test
+    void testDownloadFileToStreamFailure() {
+        InputStream failing = new InputStream() {
+            @Override
+            public int read() throws IOException {
+                throw new IOException("connection reset");
+            }
+        };
+        S3Object s3Object = mock(S3Object.class);
+        when(s3Object.getObjectContent()).thenReturn(s3Stream(failing));
+        when(s3Client.getObject(BUCKET, "key.csv")).thenReturn(s3Object);
+
+        UncheckedIOException ex = assertThrows(UncheckedIOException.class,
+                () -> service.downloadFile("key.csv", BUCKET, new ByteArrayOutputStream()));
+        assertEquals("Error downloading file from S3", ex.getMessage());
     }
 
     @DisplayName("deleteFile deletes the object from the bucket")
