@@ -6,9 +6,6 @@ import org.springframework.http.HttpStatus;
 import java.util.Collections;
 import java.util.List;
 
-/**
- * An export request that cannot be served, with the HTTP status to answer with.
- */
 @Getter
 public class ExportException extends RuntimeException {
 

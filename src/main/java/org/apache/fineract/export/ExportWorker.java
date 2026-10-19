@@ -72,7 +72,6 @@ public class ExportWorker {
     }
 
     /**
-     * Queues a job on the export pool.
      * @throws org.springframework.core.task.TaskRejectedException when the pool and its queue are full
      */
     public void submit(String tenant, String jobId) {

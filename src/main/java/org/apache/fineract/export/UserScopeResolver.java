@@ -7,9 +7,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-/**
- * The data scope an export runs with, taken from the requester's assignments at creation time.
- */
 @Component
 public class UserScopeResolver {
 

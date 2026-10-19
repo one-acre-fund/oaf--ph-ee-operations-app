@@ -8,9 +8,6 @@ import org.springframework.stereotype.Component;
 import java.io.OutputStream;
 import java.nio.file.Path;
 
-/**
- * Where finished export files live: one private object per job, under exports/{tenant}/{jobId}.csv.
- */
 @Component
 public class ExportStorage {
 

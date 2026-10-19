@@ -69,7 +69,6 @@ public class ExportCriteriaCodec {
         }
     }
 
-    /** JSON shape of the filters column. */
     static class StoredFilters {
         public Long startFrom;
         public Long startTo;

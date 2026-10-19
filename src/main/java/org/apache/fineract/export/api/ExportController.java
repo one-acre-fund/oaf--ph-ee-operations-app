@@ -21,9 +21,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/**
- * Asynchronous CSV exports: start a job, poll its status, download the file.
- */
 @RestController
 @SecurityRequirement(name = "BearerAuth")
 @RequestMapping(ExportController.PATH)

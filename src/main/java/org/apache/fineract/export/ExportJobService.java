@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Creates, looks up and serves export jobs. A job is only ever visible to the user who requested it.
+ * A job is only ever visible to the user who requested it.
  */
 @Service
 @ConditionalOnProperty(name = "export.async.enabled", havingValue = "true")
@@ -95,7 +95,6 @@ public class ExportJobService {
         return job;
     }
 
-    /** The user's exports from the last 7 days, newest first. */
     public List<ExportJob> list(AppUser user) {
         return jobRepository.findByRequestedByAndCreatedDateAfterOrderByCreatedDateDesc(user.getUsername(),
                 LocalDateTime.now(clock).minusDays(7));
