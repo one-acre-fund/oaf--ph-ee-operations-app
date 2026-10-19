@@ -17,7 +17,6 @@ import javax.persistence.metamodel.SingularAttribute;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Keyset reader over a JPA entity. Run it outside a transaction, so the entities of each chunk are not kept in a
@@ -114,9 +113,9 @@ public abstract class JpaKeysetReader<T extends AbstractPersistableCustom<Long>>
         if (criteria.getStartTo() != null) {
             predicates.add(cb.lessThanOrEqualTo(startedAt, criteria.getStartTo()));
         }
-        for (Map.Entry<Filter, List<String>> filter : criteria.getFilters().entrySet()) {
-            predicates.add(filterPredicate(cb, query, root, filter.getKey(), filter.getValue()));
-        }
+        criteria.getFilters().entrySet().stream()
+                .map(filter -> filterPredicate(cb, query, root, filter.getKey(), filter.getValue()))
+                .forEach(predicates::add);
         predicates.addAll(scopePredicates(cb, root, criteria.getScope()));
         return predicates;
     }

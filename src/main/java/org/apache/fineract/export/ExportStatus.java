@@ -11,5 +11,10 @@ public enum ExportStatus {
     DOWNLOADED,
     EXPIRED;
 
-    public static final Set<ExportStatus> ACTIVE = EnumSet.of(QUEUED, RUNNING);
+    /**
+     * @return a new set of the statuses of jobs that are not finished yet
+     */
+    public static Set<ExportStatus> active() {
+        return EnumSet.of(QUEUED, RUNNING);
+    }
 }

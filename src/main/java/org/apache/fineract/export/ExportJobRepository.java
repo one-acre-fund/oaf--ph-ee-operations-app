@@ -7,7 +7,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
-import java.util.Date;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface ExportJobRepository extends JpaRepository<ExportJob, Long> {
@@ -24,5 +24,5 @@ public interface ExportJobRepository extends JpaRepository<ExportJob, Long> {
     @Transactional
     @Query("UPDATE ExportJob j SET j.status = org.apache.fineract.export.ExportStatus.RUNNING, j.startedAt = :now "
             + "WHERE j.jobId = :jobId AND j.status = org.apache.fineract.export.ExportStatus.QUEUED")
-    int claim(@Param("jobId") String jobId, @Param("now") Date now);
+    int claim(@Param("jobId") String jobId, @Param("now") LocalDateTime now);
 }

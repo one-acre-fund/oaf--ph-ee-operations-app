@@ -10,7 +10,7 @@ import javax.persistence.EnumType;
 import javax.persistence.Enumerated;
 import javax.persistence.Lob;
 import javax.persistence.Table;
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -61,11 +61,11 @@ public class ExportJob extends AbstractPersistableCustom<Long> {
     private String errorMessage;
 
     @Column(name = "started_at")
-    private Date startedAt;
+    private LocalDateTime startedAt;
 
     @Column(name = "completed_at")
-    private Date completedAt;
+    private LocalDateTime completedAt;
 
     @Column(name = "expires_at")
-    private Date expiresAt;
+    private LocalDateTime expiresAt;
 }

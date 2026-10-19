@@ -6,6 +6,7 @@ import org.apache.fineract.operations.TransactionRequestState;
 import org.apache.fineract.operations.TransactionRequest_;
 import org.apache.fineract.operations.Variable;
 import org.apache.fineract.operations.Variable_;
+import org.apache.fineract.organisation.parent.AbstractPersistableCustom_;
 
 import javax.persistence.EntityManager;
 import javax.persistence.criteria.CriteriaBuilder;
@@ -79,7 +80,7 @@ public class TransactionRequestReader extends JpaKeysetReader<TransactionRequest
 
         Subquery<Long> subquery = query.subquery(Long.class);
         Root<Variable> variable = subquery.from(Variable.class);
-        subquery.select(variable.get(Variable_.id)).where(
+        subquery.select(variable.get(AbstractPersistableCustom_.id)).where(
                 cb.equal(variable.get(Variable_.transactionRequest), root),
                 cb.equal(variable.get(Variable_.name), ERROR_DESCRIPTION_VARIABLE),
                 variable.get(Variable_.value).in(matches));

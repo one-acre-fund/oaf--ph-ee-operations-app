@@ -54,7 +54,7 @@ class CsvExportWriterTest {
     void writesBom() throws IOException {
         String csv = write(Collections.emptyList(), true);
 
-        assertTrue(csv.startsWith("﻿TRANSACTIONID,"), csv);
+        assertTrue(csv.startsWith("\uFEFFTRANSACTIONID,"), csv);
     }
 
     private String write(List<Transfer> rows, boolean bom) throws IOException {

@@ -11,16 +11,16 @@ import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Writes rows as RFC 4180 CSV (UTF-8, CRLF, quoted when needed). The header is written on creation.
  */
 public class CsvExportWriter<T> implements Closeable {
 
-    private static final char BOM = '﻿';
+    private static final char BOM = '\uFEFF';
 
     private final ICsvListWriter csvWriter;
     private final List<ExportColumn<T>> columns;
@@ -42,11 +42,9 @@ public class CsvExportWriter<T> implements Closeable {
     }
 
     public void write(T row) throws IOException {
-        List<Object> values = new ArrayList<>(columns.size());
-        for (ExportColumn<T> column : columns) {
-            values.add(toCell(column.getValue().apply(row)));
-        }
-        csvWriter.write(values);
+        csvWriter.write(columns.stream()
+                .map(column -> toCell(column.getValue().apply(row)))
+                .collect(Collectors.toList()));
     }
 
     public void writeAll(List<T> rows) throws IOException {
