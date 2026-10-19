@@ -99,7 +99,7 @@ payment:
     - id: "slcb"
       type: "BATCH"
 
-# FD-1929 asynchronous CSV exports (/api/v1/exports). Off until ops-web uses the new API.
+# Asynchronous CSV exports (/api/v1/exports). Off until ops-web uses the new API.
 # Other settings and their defaults: org.apache.fineract.export.ExportProperties
 export:
   async:
