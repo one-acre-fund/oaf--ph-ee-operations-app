@@ -16,6 +16,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -131,7 +132,23 @@ class ExportJobServiceTest {
         when(repository.findByRequestedByAndCreatedDateAfterOrderByCreatedDateDesc("ash", NOW.minusDays(7)))
                 .thenReturn(jobs);
 
-        assertSame(jobs, service.list(user));
+        assertEquals(jobs, service.list(user));
+    }
+
+    @Test
+    @DisplayName("Lists only the types the user may still export, and 403 when they may export none")
+    void listChecksExportPermission() {
+        ExportJob transfers = job(ExportStatus.SUCCEEDED, null);
+        transfers.setType(ExportType.TRANSFERS);
+        ExportJob requests = job(ExportStatus.SUCCEEDED, null);
+        when(repository.findByRequestedByAndCreatedDateAfterOrderByCreatedDateDesc("ash", NOW.minusDays(7)))
+                .thenReturn(Arrays.asList(transfers, requests));
+        when(user.hasNotPermissionForAnyOf("ALL_FUNCTIONS", "EXPORT_TRANSACTION_REQUEST")).thenReturn(true);
+
+        assertEquals(Collections.singletonList(transfers), service.list(user));
+
+        when(user.hasNotPermissionForAnyOf("ALL_FUNCTIONS", "EXPORT_TRANSFER")).thenReturn(true);
+        assertThrows(NoAuthorizationException.class, () -> service.list(user));
     }
 
     @Test

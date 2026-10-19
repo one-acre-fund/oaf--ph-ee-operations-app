@@ -13,6 +13,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -31,7 +32,8 @@ public class ExportFilterValidator {
 
     private static final String FILTERS = "filters.";
 
-    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("uuuu-MM-dd HH:mm:ss")
+            .withResolverStyle(ResolverStyle.STRICT);
 
     private static final Set<Filter> TRANSFER_FILTERS = EnumSet.of(Filter.TRANSACTIONID, Filter.PAYERID,
             Filter.PAYEEID, Filter.WORKFLOWINSTANCEKEY, Filter.STATE, Filter.CLIENTCORRELATIONID, Filter.PAYERDFSPID);

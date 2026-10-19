@@ -1,5 +1,6 @@
 package org.apache.fineract.export;
 
+import org.apache.fineract.exception.NoAuthorizationException;
 import org.apache.fineract.export.api.ExportRequest;
 import org.apache.fineract.export.read.DataScope;
 import org.apache.fineract.export.read.ExportCriteria;
@@ -15,8 +16,12 @@ import org.springframework.stereotype.Service;
 import java.io.OutputStream;
 import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * A job is only ever visible to the user who requested it.
@@ -95,9 +100,20 @@ public class ExportJobService {
         return job;
     }
 
+    /**
+     * Only jobs of types the user may still export; 403 when they may export none.
+     */
     public List<ExportJob> list(AppUser user) {
+        Set<ExportType> allowed = Arrays.stream(ExportType.values())
+                .filter(type -> !user.hasNotPermissionForAnyOf("ALL_FUNCTIONS", "EXPORT_" + resourceName(type)))
+                .collect(Collectors.toCollection(() -> EnumSet.noneOf(ExportType.class)));
+        if (allowed.isEmpty()) {
+            throw new NoAuthorizationException("User has no authority to export");
+        }
         return jobRepository.findByRequestedByAndCreatedDateAfterOrderByCreatedDateDesc(user.getUsername(),
-                LocalDateTime.now(clock).minusDays(7));
+                        LocalDateTime.now(clock).minusDays(7)).stream()
+                .filter(job -> allowed.contains(job.getType()))
+                .collect(Collectors.toList());
     }
 
     /**

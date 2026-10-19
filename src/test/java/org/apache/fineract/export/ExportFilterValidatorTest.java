@@ -73,6 +73,18 @@ class ExportFilterValidatorTest {
     }
 
     @Test
+    @DisplayName("Rejects impossible dates instead of shifting them")
+    void rejectsImpossibleDates() {
+        ExportRequest request = request(ExportType.TRANSFERS, "2026-02-30 00:00:00", "2026-10-15 24:00:00", null);
+
+        ExportException e = assertThrows(ExportException.class, () -> validator.validate(request));
+
+        assertEquals(2, e.getDetails().size(), e.getDetails().toString());
+        assertTrue(e.getDetails().get(0).startsWith("startFrom: expected yyyy-MM-dd HH:mm:ss"));
+        assertTrue(e.getDetails().get(1).startsWith("startTo: expected yyyy-MM-dd HH:mm:ss"));
+    }
+
+    @Test
     @DisplayName("Rejects a missing type, a reversed date range and a filter given twice")
     void rejectsTypeRangeAndDuplicates() {
         ExportRequest withoutType = request(null, null, null, null);
