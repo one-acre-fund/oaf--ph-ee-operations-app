@@ -56,8 +56,9 @@ class ExportFilterValidatorTest {
         filters.put("workflowInstanceKey", Arrays.asList("12", "abc"));
         filters.put("payerId", Arrays.asList("", null));
 
-        ExportException e = assertThrows(ExportException.class, () -> validator.validate(
-                request(ExportType.TRANSFERS, "15/10/2026", "2026-10-15 23:59:59", filters)));
+        ExportRequest request = request(ExportType.TRANSFERS, "15/10/2026", "2026-10-15 23:59:59", filters);
+
+        ExportException e = assertThrows(ExportException.class, () -> validator.validate(request));
 
         assertEquals(HttpStatus.BAD_REQUEST, e.getStatus());
         List<String> details = e.getDetails();
@@ -74,13 +75,15 @@ class ExportFilterValidatorTest {
     @Test
     @DisplayName("Rejects a missing type, a reversed date range and a filter given twice")
     void rejectsTypeRangeAndDuplicates() {
-        ExportException noType = assertThrows(ExportException.class,
-                () -> validator.validate(request(null, null, null, null)));
-        ExportException reversed = assertThrows(ExportException.class, () -> validator.validate(
-                request(ExportType.TRANSACTION_REQUESTS, "2026-10-16 00:00:00", "2026-10-15 00:00:00", null)));
-        ExportException twice = assertThrows(ExportException.class, () -> validator.validate(
-                request(ExportType.TRANSACTION_REQUESTS, null, null, filters("state",
-                        Collections.singletonList("failed"), "STATE", Collections.singletonList("accepted")))));
+        ExportRequest withoutType = request(null, null, null, null);
+        ExportRequest reversedRange = request(ExportType.TRANSACTION_REQUESTS, "2026-10-16 00:00:00",
+                "2026-10-15 00:00:00", null);
+        ExportRequest stateTwice = request(ExportType.TRANSACTION_REQUESTS, null, null, filters("state",
+                Collections.singletonList("failed"), "STATE", Collections.singletonList("accepted")));
+
+        ExportException noType = assertThrows(ExportException.class, () -> validator.validate(withoutType));
+        ExportException reversed = assertThrows(ExportException.class, () -> validator.validate(reversedRange));
+        ExportException twice = assertThrows(ExportException.class, () -> validator.validate(stateTwice));
 
         assertTrue(noType.getDetails().get(0).startsWith("type: required"));
         assertEquals("startFrom: must not be after startTo", reversed.getDetails().get(0));

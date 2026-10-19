@@ -141,8 +141,10 @@ class AwsFileTransferImplTest {
         when(s3Object.getObjectContent()).thenReturn(s3Stream(failing));
         when(s3Client.getObject(BUCKET, "key.csv")).thenReturn(s3Object);
 
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
         UncheckedIOException ex = assertThrows(UncheckedIOException.class,
-                () -> service.downloadFile("key.csv", BUCKET, new ByteArrayOutputStream()));
+                () -> service.downloadFile("key.csv", BUCKET, out));
         assertEquals("Error downloading file from S3", ex.getMessage());
     }
 

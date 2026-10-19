@@ -39,9 +39,11 @@ class UserScopeResolverTest {
     @Test
     @DisplayName("A user with an empty assignment is refused (403) instead of exporting everything")
     void emptyAssignmentRefused() {
-        ExportException e = assertThrows(ExportException.class, () -> resolver.resolve(
-                user(Collections.singletonList("*"), Collections.emptyList(), Collections.singletonList("*")),
-                ExportType.TRANSACTION_REQUESTS));
+        AppUser noCurrencies = user(Collections.singletonList("*"), Collections.emptyList(),
+                Collections.singletonList("*"));
+
+        ExportException e = assertThrows(ExportException.class,
+                () -> resolver.resolve(noCurrencies, ExportType.TRANSACTION_REQUESTS));
 
         assertEquals(HttpStatus.FORBIDDEN, e.getStatus());
     }
@@ -49,10 +51,13 @@ class UserScopeResolverTest {
     @Test
     @DisplayName("Missing dukas or id types are refused too")
     void otherEmptyAssignmentsRefused() {
-        assertThrows(ExportException.class, () -> resolver.resolve(user(Collections.emptyList(),
-                Collections.singletonList("*"), Collections.singletonList("*")), ExportType.TRANSACTION_REQUESTS));
-        assertThrows(ExportException.class, () -> resolver.resolve(user(Collections.singletonList("*"),
-                Collections.singletonList("*"), Collections.emptyList()), ExportType.TRANSACTION_REQUESTS));
+        AppUser noDukas = user(Collections.emptyList(), Collections.singletonList("*"),
+                Collections.singletonList("*"));
+        AppUser noIdTypes = user(Collections.singletonList("*"), Collections.singletonList("*"),
+                Collections.emptyList());
+
+        assertThrows(ExportException.class, () -> resolver.resolve(noDukas, ExportType.TRANSACTION_REQUESTS));
+        assertThrows(ExportException.class, () -> resolver.resolve(noIdTypes, ExportType.TRANSACTION_REQUESTS));
     }
 
     private static AppUser user(List<String> dukas, List<String> currencies, List<String> idTypes) {

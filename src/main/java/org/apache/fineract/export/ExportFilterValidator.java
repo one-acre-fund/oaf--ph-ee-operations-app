@@ -29,6 +29,8 @@ import java.util.Set;
 @Component
 public class ExportFilterValidator {
 
+    private static final String FILTERS = "filters.";
+
     private static final DateTimeFormatter DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private static final Set<Filter> TRANSFER_FILTERS = EnumSet.of(Filter.TRANSACTIONID, Filter.PAYERID,
@@ -83,11 +85,11 @@ public class ExportFilterValidator {
             List<String> values = entry.getValue();
             Filter filter = parseFilterName(name);
             if (filter == null) {
-                errors.add("filters." + name + ": unknown filter, one of " + Arrays.toString(Filter.values()));
+                errors.add(FILTERS + name + ": unknown filter, one of " + Arrays.toString(Filter.values()));
             } else if (type == ExportType.TRANSFERS && !TRANSFER_FILTERS.contains(filter)) {
-                errors.add("filters." + name + ": not supported for " + type);
+                errors.add(FILTERS + name + ": not supported for " + type);
             } else if (filters.containsKey(filter)) {
-                errors.add("filters." + name + ": given more than once");
+                errors.add(FILTERS + name + ": given more than once");
             } else if (values != null && !values.isEmpty()) {
                 validateValues(type, filter, name, values, errors);
                 filters.put(filter, values);
@@ -108,11 +110,11 @@ public class ExportFilterValidator {
                                        List<String> errors) {
         for (String value : values) {
             if (value == null || value.isEmpty()) {
-                errors.add("filters." + name + ": empty value");
+                errors.add(FILTERS + name + ": empty value");
             } else if (filter == Filter.STATE && !isState(type, value)) {
-                errors.add("filters." + name + ": unknown state '" + value + "'");
+                errors.add(FILTERS + name + ": unknown state '" + value + "'");
             } else if (filter == Filter.WORKFLOWINSTANCEKEY && type == ExportType.TRANSFERS && !isNumber(value)) {
-                errors.add("filters." + name + ": not a number '" + value + "'");
+                errors.add(FILTERS + name + ": not a number '" + value + "'");
             }
         }
     }

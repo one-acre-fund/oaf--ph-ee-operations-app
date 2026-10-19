@@ -75,8 +75,9 @@ class ExportJobServiceTest {
     void requiresPermission() {
         doThrow(new NoAuthorizationException("no")).when(user).validateHasExportPermission("TRANSACTION_REQUEST");
 
-        assertThrows(NoAuthorizationException.class, () -> service.create(
-                ExportFilterValidatorTest.request(ExportType.TRANSACTION_REQUESTS, null, null, null), user, "oaf"));
+        ExportRequest request = ExportFilterValidatorTest.request(ExportType.TRANSACTION_REQUESTS, null, null, null);
+
+        assertThrows(NoAuthorizationException.class, () -> service.create(request, user, "oaf"));
         verify(repository, never()).save(any());
     }
 
@@ -85,8 +86,9 @@ class ExportJobServiceTest {
     void limitsActiveJobs() {
         when(repository.countByRequestedByAndStatusIn("ash", ExportStatus.active())).thenReturn(2L);
 
-        ExportException e = assertThrows(ExportException.class, () -> service.create(
-                ExportFilterValidatorTest.request(ExportType.TRANSFERS, null, null, null), user, "oaf"));
+        ExportRequest request = ExportFilterValidatorTest.request(ExportType.TRANSFERS, null, null, null);
+
+        ExportException e = assertThrows(ExportException.class, () -> service.create(request, user, "oaf"));
 
         assertEquals(HttpStatus.TOO_MANY_REQUESTS, e.getStatus());
         verify(repository, never()).save(any());
@@ -98,8 +100,9 @@ class ExportJobServiceTest {
         doThrow(new TaskRejectedException("full")).when(worker).submit(anyString(), anyString());
         ArgumentCaptor<ExportJob> saved = ArgumentCaptor.forClass(ExportJob.class);
 
-        ExportException e = assertThrows(ExportException.class, () -> service.create(
-                ExportFilterValidatorTest.request(ExportType.TRANSFERS, null, null, null), user, "oaf"));
+        ExportRequest request = ExportFilterValidatorTest.request(ExportType.TRANSFERS, null, null, null);
+
+        ExportException e = assertThrows(ExportException.class, () -> service.create(request, user, "oaf"));
 
         assertEquals(HttpStatus.SERVICE_UNAVAILABLE, e.getStatus());
         verify(repository, times(2)).save(saved.capture());
