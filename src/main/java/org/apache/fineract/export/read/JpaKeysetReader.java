@@ -6,6 +6,7 @@ import org.apache.fineract.organisation.parent.AbstractPersistableCustom_;
 import org.springframework.data.domain.Sort;
 
 import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Expression;
@@ -19,20 +20,22 @@ import java.util.Date;
 import java.util.List;
 
 /**
- * Keyset reader over a JPA entity. Run it outside a transaction, so the entities of each chunk are not kept in a
- * persistence context and can be garbage collected once written.
+ * Keyset reader over a JPA entity. Each chunk is read with its own EntityManager, closed right after the query, so
+ * the rows of a chunk are detached and can be garbage collected once written: memory stays bounded however many rows
+ * the export has, and no persistence context owned by the caller is touched. The tenant DataSource is resolved from
+ * the current thread when each chunk is read.
  */
 public abstract class JpaKeysetReader<T extends AbstractPersistableCustom<Long>> extends KeysetReader<T> {
 
-    private final EntityManager entityManager;
+    private final EntityManagerFactory entityManagerFactory;
     private final Class<T> entityClass;
     private final ExportCriteria criteria;
     private final SingularAttribute<? super T, Date> startedAtAttribute;
 
-    protected JpaKeysetReader(EntityManager entityManager, Class<T> entityClass, ExportCriteria criteria,
+    protected JpaKeysetReader(EntityManagerFactory entityManagerFactory, Class<T> entityClass, ExportCriteria criteria,
                               SingularAttribute<? super T, Date> startedAtAttribute, int chunkSize) {
         super(chunkSize);
-        this.entityManager = entityManager;
+        this.entityManagerFactory = entityManagerFactory;
         this.entityClass = entityClass;
         this.criteria = criteria;
         this.startedAtAttribute = startedAtAttribute;
@@ -51,7 +54,7 @@ public abstract class JpaKeysetReader<T extends AbstractPersistableCustom<Long>>
 
     @Override
     protected List<T> fetchDated(Date lastStartedAt, Long lastId, int limit) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaBuilder cb = entityManagerFactory.getCriteriaBuilder();
         CriteriaQuery<T> query = cb.createQuery(entityClass);
         Root<T> root = query.from(entityClass);
         Path<Date> startedAt = root.get(startedAtAttribute);
@@ -64,12 +67,12 @@ public abstract class JpaKeysetReader<T extends AbstractPersistableCustom<Long>>
         }
         query.select(root).where(predicates.toArray(new Predicate[0]))
                 .orderBy(order(cb, startedAt), order(cb, id));
-        return entityManager.createQuery(query).setMaxResults(limit).getResultList();
+        return fetch(query, limit);
     }
 
     @Override
     protected List<T> fetchUndated(Long lastId, int limit) {
-        CriteriaBuilder cb = entityManager.getCriteriaBuilder();
+        CriteriaBuilder cb = entityManagerFactory.getCriteriaBuilder();
         CriteriaQuery<T> query = cb.createQuery(entityClass);
         Root<T> root = query.from(entityClass);
         Path<Long> id = root.get(AbstractPersistableCustom_.id);
@@ -80,7 +83,16 @@ public abstract class JpaKeysetReader<T extends AbstractPersistableCustom<Long>>
             predicates.add(descending() ? cb.lessThan(id, lastId) : cb.greaterThan(id, lastId));
         }
         query.select(root).where(predicates.toArray(new Predicate[0])).orderBy(order(cb, id));
-        return entityManager.createQuery(query).setMaxResults(limit).getResultList();
+        return fetch(query, limit);
+    }
+
+    private List<T> fetch(CriteriaQuery<T> query, int limit) {
+        EntityManager entityManager = entityManagerFactory.createEntityManager();
+        try {
+            return entityManager.createQuery(query).setMaxResults(limit).getResultList();
+        } finally {
+            entityManager.close();
+        }
     }
 
     @Override

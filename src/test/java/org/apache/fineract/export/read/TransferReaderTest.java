@@ -4,7 +4,6 @@ import org.apache.fineract.operations.Filter;
 import org.apache.fineract.operations.Transfer;
 import org.apache.fineract.operations.TransferStatus;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,11 +25,13 @@ import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.spy;
 
 class TransferReaderTest {
 
     private static EntityManagerFactory factory;
-    private EntityManager entityManager;
 
     @BeforeAll
     static void startDatabase() {
@@ -59,12 +60,6 @@ class TransferReaderTest {
                 em.flush();
             }
         });
-        entityManager = factory.createEntityManager();
-    }
-
-    @AfterEach
-    void closeEntityManager() {
-        entityManager.close();
     }
 
     @Test
@@ -137,6 +132,25 @@ class TransferReaderTest {
     }
 
     @Test
+    @DisplayName("Reads each chunk with its own EntityManager and closes it, so memory stays bounded")
+    void usesShortLivedEntityManagerPerChunk() throws IOException {
+        EntityManagerFactory spyFactory = spy(factory);
+        List<EntityManager> created = new ArrayList<>();
+        doAnswer(invocation -> {
+            EntityManager em = (EntityManager) invocation.callRealMethod();
+            created.add(em);
+            return em;
+        }).when(spyFactory).createEntityManager();
+
+        long rows = new TransferReader(spyFactory, ExportCriteria.builder().build(), 2).read(chunk -> { });
+
+        assertEquals(7, rows);
+        // 5 dated rows in chunks of 2 = 3 queries, then 2 undated rows = 2 queries (the last one empty)
+        assertEquals(5, created.size());
+        assertTrue(created.stream().noneMatch(EntityManager::isOpen), "every chunk's EntityManager is closed");
+    }
+
+    @Test
     @DisplayName("Rejects filters that do not exist on transfers")
     void rejectsUnsupportedFilter() {
         ExportCriteria criteria = ExportCriteria.builder()
@@ -147,7 +161,7 @@ class TransferReaderTest {
 
     private List<String> read(ExportCriteria criteria) throws IOException {
         List<String> ids = new ArrayList<>();
-        new TransferReader(entityManager, criteria, 2).read(chunk -> chunk.forEach(t -> ids.add(t.getTransactionId())));
+        new TransferReader(factory, criteria, 2).read(chunk -> chunk.forEach(t -> ids.add(t.getTransactionId())));
         return ids;
     }
 

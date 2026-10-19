@@ -5,7 +5,6 @@ import org.apache.fineract.operations.TransactionRequest;
 import org.apache.fineract.operations.TransactionRequestState;
 import org.apache.fineract.operations.Variable;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,7 +28,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class TransactionRequestReaderTest {
 
     private static EntityManagerFactory factory;
-    private EntityManager entityManager;
 
     @BeforeAll
     static void startDatabase() {
@@ -51,7 +49,9 @@ class TransactionRequestReaderTest {
                     request("r1", 100, TransactionRequestState.ACCEPTED, "mno-1", "KES"),
                     request("r2", 200, TransactionRequestState.FAILED, "mno-2", "KES"),
                     request("r3", 200, TransactionRequestState.FAILED, "mno-3", "UGX"),
-                    request("r4", null, TransactionRequestState.IN_PROGRESS, null, "KES"))) {
+                    request("r4", null, TransactionRequestState.IN_PROGRESS, null, "KES"),
+                    request("r5", 50, TransactionRequestState.FAILED, "mno-5", "KES"),
+                    request("r6", 40, TransactionRequestState.FAILED, "mno-6", "KES"))) {
                 em.persist(request);
                 em.flush();
             }
@@ -60,19 +60,16 @@ class TransactionRequestReaderTest {
             em.persist(variable(2, "errorDescription", "\"Insufficient funds\""));
             em.persist(variable(3, "errorDescription", "\"Timeout\""));
             em.persist(variable(1, "note", "\"Insufficient funds\""));
+            // JSON encoding of: Unknown account "abc"   and   Bad path C:\temp
+            em.persist(variable(5, "errorDescription", "\"Unknown account \\\"abc\\\"\""));
+            em.persist(variable(6, "errorDescription", "\"Bad path C:\\\\temp\""));
         });
-        entityManager = factory.createEntityManager();
-    }
-
-    @AfterEach
-    void closeEntityManager() {
-        entityManager.close();
     }
 
     @Test
     @DisplayName("Reads every request once, newest first, then requests without a start date")
     void readsAllRows() throws IOException {
-        assertEquals(Arrays.asList("r3", "r2", "r1", "r4"), read(ExportCriteria.builder().build()));
+        assertEquals(Arrays.asList("r3", "r2", "r1", "r5", "r6", "r4"), read(ExportCriteria.builder().build()));
     }
 
     @ParameterizedTest(name = "{0} {1}")
@@ -96,7 +93,7 @@ class TransactionRequestReaderTest {
     @Test
     @DisplayName("Filters by state names and external ids")
     void filtersByStateAndExternalId() throws IOException {
-        assertEquals(Arrays.asList("r3", "r2"),
+        assertEquals(Arrays.asList("r3", "r2", "r5", "r6"),
                 read(criteria(Filter.STATE, Collections.singletonList("failed"))));
         assertEquals(Collections.singletonList("r1"),
                 read(criteria(Filter.EXTERNALID, Collections.singletonList("mno-1"))));
@@ -112,17 +109,26 @@ class TransactionRequestReaderTest {
     }
 
     @Test
+    @DisplayName("Matches error descriptions containing quotes and backslashes against their JSON encoding")
+    void filtersByErrorDescriptionWithEscapes() throws IOException {
+        assertEquals(Collections.singletonList("r5"),
+                read(criteria(Filter.ERRORDESCRIPTION, Collections.singletonList("Unknown account \"abc\""))));
+        assertEquals(Collections.singletonList("r6"),
+                read(criteria(Filter.ERRORDESCRIPTION, Collections.singletonList("Bad path C:\\temp"))));
+    }
+
+    @Test
     @DisplayName("Restricts requests to the data scope")
     void appliesDataScope() throws IOException {
         ExportCriteria kesOnly = ExportCriteria.builder()
                 .scope(DataScope.builder().currencies(Collections.singletonList("KES")).build()).build();
 
-        assertEquals(Arrays.asList("r2", "r1", "r4"), read(kesOnly));
+        assertEquals(Arrays.asList("r2", "r1", "r5", "r6", "r4"), read(kesOnly));
     }
 
     private List<String> read(ExportCriteria criteria) throws IOException {
         List<String> ids = new ArrayList<>();
-        new TransactionRequestReader(entityManager, criteria, 2)
+        new TransactionRequestReader(factory, criteria, 2)
                 .read(chunk -> chunk.forEach(r -> ids.add(r.getTransactionId())));
         return ids;
     }

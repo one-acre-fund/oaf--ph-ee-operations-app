@@ -50,6 +50,35 @@ class CsvExportWriterTest {
     }
 
     @Test
+    @DisplayName("Prefixes text that a spreadsheet would run as a formula, and leaves plain numbers alone")
+    void neutralisesFormulaCells() throws IOException {
+        Transfer injected = new Transfer();
+        injected.setTransactionId("=HYPERLINK(\"http://evil\",\"x\")");
+        injected.setAmount(new BigDecimal("-12.50"));
+        injected.setErrorInformation("@SUM(A1:A9)");
+
+        String csv = write(Collections.singletonList(injected), false);
+
+        assertEquals("TRANSACTIONID,STATUS,AMOUNT,ERRORINFORMATION,STARTEDAT,COMPLETEDAT\r\n"
+                + "\"'=HYPERLINK(\"\"http://evil\"\",\"\"x\"\")\",,-12.50,'@SUM(A1:A9),,\r\n", csv);
+    }
+
+    @Test
+    @DisplayName("Formula check covers =, +, -, @, tab and carriage return, but not numbers like phone numbers")
+    void formulaRules() {
+        assertEquals("'=1+2", CsvExportWriter.neutraliseFormula("=1+2"));
+        assertEquals("'+cmd", CsvExportWriter.neutraliseFormula("+cmd"));
+        assertEquals("'-abc", CsvExportWriter.neutraliseFormula("-abc"));
+        assertEquals("'@x", CsvExportWriter.neutraliseFormula("@x"));
+        assertEquals("'\tx", CsvExportWriter.neutraliseFormula("\tx"));
+        assertEquals("'\rx", CsvExportWriter.neutraliseFormula("\rx"));
+        assertEquals("+254712345678", CsvExportWriter.neutraliseFormula("+254712345678"));
+        assertEquals("-12.5", CsvExportWriter.neutraliseFormula("-12.5"));
+        assertEquals("tx-1", CsvExportWriter.neutraliseFormula("tx-1"));
+        assertEquals("", CsvExportWriter.neutraliseFormula(""));
+    }
+
+    @Test
     @DisplayName("Starts with a UTF-8 BOM when asked")
     void writesBom() throws IOException {
         String csv = write(Collections.emptyList(), true);

@@ -1,5 +1,6 @@
 package org.apache.fineract.export.read;
 
+import com.fasterxml.jackson.core.io.JsonStringEncoder;
 import org.apache.fineract.operations.Filter;
 import org.apache.fineract.operations.TransactionRequest;
 import org.apache.fineract.operations.TransactionRequestState;
@@ -8,7 +9,7 @@ import org.apache.fineract.operations.Variable;
 import org.apache.fineract.operations.Variable_;
 import org.apache.fineract.organisation.parent.AbstractPersistableCustom_;
 
-import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
@@ -23,8 +24,9 @@ public class TransactionRequestReader extends JpaKeysetReader<TransactionRequest
 
     static final String ERROR_DESCRIPTION_VARIABLE = "errorDescription";
 
-    public TransactionRequestReader(EntityManager entityManager, ExportCriteria criteria, int chunkSize) {
-        super(entityManager, TransactionRequest.class, criteria, TransactionRequest_.startedAt, chunkSize);
+
+    public TransactionRequestReader(EntityManagerFactory entityManagerFactory, ExportCriteria criteria, int chunkSize) {
+        super(entityManagerFactory, TransactionRequest.class, criteria, TransactionRequest_.startedAt, chunkSize);
     }
 
     @Override
@@ -71,12 +73,13 @@ public class TransactionRequestReader extends JpaKeysetReader<TransactionRequest
 
     /**
      * EXISTS on the errorDescription variable. A subquery, not a join, so a request with several matching variables
-     * is still exported once. Variable values are stored as JSON, so both the plain and the quoted value match.
+     * is still exported once. Variable values are stored as JSON, so both the plain value and its JSON string
+     * encoding (in quotes, with quotes and backslashes escaped) match.
      */
     private Predicate hasErrorDescription(CriteriaBuilder cb, CriteriaQuery<?> query, Root<TransactionRequest> root,
                                           List<String> values) {
         List<String> matches = new ArrayList<>(values);
-        values.forEach(v -> matches.add("\"" + v + "\""));
+        values.forEach(v -> matches.add(toJsonString(v)));
 
         Subquery<Long> subquery = query.subquery(Long.class);
         Root<Variable> variable = subquery.from(Variable.class);
@@ -85,5 +88,9 @@ public class TransactionRequestReader extends JpaKeysetReader<TransactionRequest
                 cb.equal(variable.get(Variable_.name), ERROR_DESCRIPTION_VARIABLE),
                 variable.get(Variable_.value).in(matches));
         return cb.exists(subquery);
+    }
+
+    private static String toJsonString(String value) {
+        return "\"" + new String(JsonStringEncoder.getInstance().quoteAsString(value)) + "\"";
     }
 }

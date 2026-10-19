@@ -5,7 +5,7 @@ import org.apache.fineract.operations.Transfer;
 import org.apache.fineract.operations.TransferStatus;
 import org.apache.fineract.operations.Transfer_;
 
-import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import javax.persistence.criteria.CriteriaBuilder;
 import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Predicate;
@@ -17,8 +17,8 @@ import java.util.stream.Collectors;
 
 public class TransferReader extends JpaKeysetReader<Transfer> {
 
-    public TransferReader(EntityManager entityManager, ExportCriteria criteria, int chunkSize) {
-        super(entityManager, Transfer.class, criteria, Transfer_.startedAt, chunkSize);
+    public TransferReader(EntityManagerFactory entityManagerFactory, ExportCriteria criteria, int chunkSize) {
+        super(entityManagerFactory, Transfer.class, criteria, Transfer_.startedAt, chunkSize);
     }
 
     @Override
