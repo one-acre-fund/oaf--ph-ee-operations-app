@@ -1,6 +1,11 @@
 Release Notes
 
 
+## Version 1.1.17 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * Export
+            * [FD-1929] - Add export job table, RFC 4180 CSV writer and keyset readers for async exports (not wired up yet)
+
 ## Version 1.1.16 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * Batch Processing
