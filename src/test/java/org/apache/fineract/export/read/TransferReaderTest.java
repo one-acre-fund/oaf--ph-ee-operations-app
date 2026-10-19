@@ -9,6 +9,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.data.domain.Sort;
 
 import javax.persistence.EntityManager;
@@ -19,6 +22,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -100,6 +104,26 @@ class TransferReaderTest {
         assertEquals(Arrays.asList("t5", "t2"), read(byWorkflowKey));
     }
 
+    @ParameterizedTest(name = "{0} {1}")
+    @MethodSource("singleFilters")
+    @DisplayName("Applies each filter on its own column")
+    void appliesEachFilter(Filter filter, List<String> values, List<String> expected) throws IOException {
+        assertEquals(expected, read(ExportCriteria.builder()
+                .filters(Collections.singletonMap(filter, values)).build()));
+    }
+
+    static Stream<Arguments> singleFilters() {
+        return Stream.of(
+                Arguments.of(Filter.TRANSACTIONID, Arrays.asList("t2", "t5"), Arrays.asList("t5", "t2")),
+                Arguments.of(Filter.PAYERID, Collections.singletonList("payer-b"), Arrays.asList("t4", "t3")),
+                Arguments.of(Filter.PAYEEID, Collections.singletonList("duka-2"), Collections.singletonList("t3")),
+                Arguments.of(Filter.WORKFLOWINSTANCEKEY, Arrays.asList("2", "5"), Arrays.asList("t5", "t2")),
+                Arguments.of(Filter.STATE, Collections.singletonList("failed"), Collections.singletonList("t2")),
+                Arguments.of(Filter.CLIENTCORRELATIONID, Collections.singletonList("cc-t1"),
+                        Collections.singletonList("t1")),
+                Arguments.of(Filter.PAYERDFSPID, Collections.singletonList("ams-t4"), Collections.singletonList("t4")));
+    }
+
     @Test
     @DisplayName("Restricts rows to the data scope; an empty scope list matches nothing")
     void appliesDataScope() throws IOException {
@@ -144,7 +168,9 @@ class TransferReaderTest {
         transfer.setStatus(status);
         transfer.setCurrency(currency);
         transfer.setPayerPartyId(payerPartyId);
-        transfer.setPayeePartyId("duka-1");
+        transfer.setPayeePartyId("t3".equals(transactionId) ? "duka-2" : "duka-1");
+        transfer.setClientCorrelationId("cc-" + transactionId);
+        transfer.setAmsBusinessShortCode("ams-" + transactionId);
         return transfer;
     }
 }

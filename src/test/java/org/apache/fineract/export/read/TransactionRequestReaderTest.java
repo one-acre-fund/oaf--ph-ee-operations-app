@@ -10,6 +10,9 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityManagerFactory;
@@ -19,6 +22,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -71,6 +75,24 @@ class TransactionRequestReaderTest {
         assertEquals(Arrays.asList("r3", "r2", "r1", "r4"), read(ExportCriteria.builder().build()));
     }
 
+    @ParameterizedTest(name = "{0} {1}")
+    @MethodSource("singleFilters")
+    @DisplayName("Applies each filter on its own column")
+    void appliesEachFilter(Filter filter, List<String> values, List<String> expected) throws IOException {
+        assertEquals(expected, read(criteria(filter, values)));
+    }
+
+    static Stream<Arguments> singleFilters() {
+        return Stream.of(
+                Arguments.of(Filter.TRANSACTIONID, Arrays.asList("r1", "r3"), Arrays.asList("r3", "r1")),
+                Arguments.of(Filter.PAYERID, Collections.singletonList("payer-r2"), Collections.singletonList("r2")),
+                Arguments.of(Filter.PAYEEID, Collections.singletonList("duka-2"), Collections.singletonList("r3")),
+                Arguments.of(Filter.WORKFLOWINSTANCEKEY, Arrays.asList("2", "4"), Arrays.asList("r2", "r4")),
+                Arguments.of(Filter.CLIENTCORRELATIONID, Collections.singletonList("cc-r4"),
+                        Collections.singletonList("r4")),
+                Arguments.of(Filter.PAYERDFSPID, Collections.singletonList("ams-r1"), Collections.singletonList("r1")));
+    }
+
     @Test
     @DisplayName("Filters by state names and external ids")
     void filtersByStateAndExternalId() throws IOException {
@@ -119,7 +141,10 @@ class TransactionRequestReaderTest {
         request.setState(state);
         request.setExternalId(externalId);
         request.setCurrency(currency);
-        request.setPayeePartyId("duka-1");
+        request.setPayeePartyId("r3".equals(transactionId) ? "duka-2" : "duka-1");
+        request.setPayerPartyId("payer-" + transactionId);
+        request.setClientCorrelationId("cc-" + transactionId);
+        request.setAmsBusinessShortCode("ams-" + transactionId);
         return request;
     }
 
