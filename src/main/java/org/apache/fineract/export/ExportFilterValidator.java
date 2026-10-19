@@ -55,8 +55,7 @@ public class ExportFilterValidator {
         if (startFrom != null && startTo != null && startFrom.after(startTo)) {
             errors.add("startFrom: must not be after startTo");
         }
-        Map<Filter, List<String>> filters = type == null ? new EnumMap<>(Filter.class)
-                : parseFilters(type, request.getFilters(), errors);
+        Map<Filter, List<String>> filters = parseFilters(type, request.getFilters(), errors);
 
         if (!errors.isEmpty()) {
             throw new ExportException(HttpStatus.BAD_REQUEST, "Invalid export request", errors);
@@ -113,7 +112,7 @@ public class ExportFilterValidator {
         for (String value : values) {
             if (value == null || value.isEmpty()) {
                 errors.add(FILTERS + name + ": empty value");
-            } else if (filter == Filter.STATE && !isState(type, value)) {
+            } else if (filter == Filter.STATE && type != null && !isState(type, value)) {
                 errors.add(FILTERS + name + ": unknown state '" + value + "'");
             } else if (filter == Filter.WORKFLOWINSTANCEKEY && type == ExportType.TRANSFERS && !isNumber(value)) {
                 errors.add(FILTERS + name + ": not a number '" + value + "'");

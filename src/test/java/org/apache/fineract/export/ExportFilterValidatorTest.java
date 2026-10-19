@@ -73,6 +73,23 @@ class ExportFilterValidatorTest {
     }
 
     @Test
+    @DisplayName("Without a type, still reports filter problems that do not depend on it")
+    void missingTypeStillChecksFilters() {
+        Map<String, List<String>> filters = filters("bogus", Collections.singletonList("x"),
+                "payerId", Collections.singletonList(""));
+        filters.put("state", Collections.singletonList("anything"));
+        ExportRequest request = request(null, null, null, filters);
+
+        ExportException e = assertThrows(ExportException.class, () -> validator.validate(request));
+
+        List<String> details = e.getDetails();
+        assertEquals(3, details.size(), details.toString());
+        assertTrue(details.get(0).startsWith("type: required"));
+        assertTrue(details.contains("filters.payerId: empty value"), details.toString());
+        assertTrue(details.stream().anyMatch(d -> d.startsWith("filters.bogus: unknown filter")), details.toString());
+    }
+
+    @Test
     @DisplayName("Rejects impossible dates instead of shifting them")
     void rejectsImpossibleDates() {
         ExportRequest request = request(ExportType.TRANSFERS, "2026-02-30 00:00:00", "2026-10-15 24:00:00", null);
@@ -97,6 +114,7 @@ class ExportFilterValidatorTest {
         ExportException reversed = assertThrows(ExportException.class, () -> validator.validate(reversedRange));
         ExportException twice = assertThrows(ExportException.class, () -> validator.validate(stateTwice));
 
+        assertEquals(1, noType.getDetails().size());
         assertTrue(noType.getDetails().get(0).startsWith("type: required"));
         assertEquals("startFrom: must not be after startTo", reversed.getDetails().get(0));
         assertEquals("filters.STATE: given more than once", twice.getDetails().get(0));

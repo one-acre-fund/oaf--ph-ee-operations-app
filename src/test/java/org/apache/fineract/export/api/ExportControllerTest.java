@@ -14,7 +14,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -24,11 +27,14 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 class ExportControllerTest {
 
@@ -150,6 +156,22 @@ class ExportControllerTest {
         assertEquals(400, response.getBody().getStatus());
         assertEquals("Invalid export request", response.getBody().getMessage());
         assertEquals(Collections.singletonList("startFrom: bad"), response.getBody().getDetails());
+    }
+
+    @Test
+    @DisplayName("An unknown type in the JSON body gets the export error format, not Spring's default")
+    void unknownTypeInBody() throws Exception {
+        MockMvc mvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new ExportExceptionHandler()).build();
+
+        String body = mvc.perform(post(ExportController.PATH)
+                        .contentType(MediaType.APPLICATION_JSON).accept(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"UNKNOWN\",\"startFrom\":\"bad\"}"))
+                .andExpect(status().isBadRequest())
+                .andReturn().getResponse().getContentAsString();
+
+        assertTrue(body.contains("\"status\":400"), body);
+        assertTrue(body.contains("type must be one of [TRANSFERS, TRANSACTION_REQUESTS]"), body);
     }
 
     private static ExportJob job(ExportStatus status) {
