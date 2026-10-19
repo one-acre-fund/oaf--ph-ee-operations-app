@@ -9,7 +9,7 @@ import lombok.Setter;
 /**
  * Rows that ph-ee-importer-rdbms updates in place while this application may also write them
  * (transfers, transaction requests, batches). The optimistic lock column is shared with the
- * importer (FD-1931, tenant migration V53): a save that races an update of the same row fails
+ * importer (FD-1931, tenant migration V54): a save that races an update of the same row fails
  * instead of overwriting it.
  */
 @Getter
