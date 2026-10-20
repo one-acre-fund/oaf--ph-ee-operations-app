@@ -1,7 +1,7 @@
 package org.apache.fineract.operations;
 
 import org.eclipse.persistence.annotations.Index;
-import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
+import org.apache.fineract.organisation.parent.VersionedPersistableCustom;
 import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.Table;
@@ -9,7 +9,7 @@ import java.util.Date;
 
 @Entity
 @Table(name = "batches")
-public class Batch extends AbstractPersistableCustom<Long> {
+public class Batch extends VersionedPersistableCustom {
 
     @Column(name = "BATCH_ID")
     private String batchId;
@@ -65,6 +65,7 @@ public class Batch extends AbstractPersistableCustom<Long> {
 
     @Column(name = "ZEEBE_GENERATION")
     private Long zeebeGeneration;
+
 
     @Column(name = "STARTED_AT")
     private Date startedAt;
@@ -185,6 +186,7 @@ public class Batch extends AbstractPersistableCustom<Long> {
     public void setZeebeGeneration(Long zeebeGeneration) {
         this.zeebeGeneration = zeebeGeneration;
     }
+
 
     public Date getStartedAt() {
         return startedAt;
