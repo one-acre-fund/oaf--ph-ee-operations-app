@@ -154,7 +154,8 @@ public class ExportWorker implements DisposableBean {
             logger.info("Export {} was already claimed or is no longer queued", jobId);
             return;
         }
-        running.put(jobId, new Run(job.getTenant(), attempt));
+        Run run = new Run(job.getTenant(), attempt);
+        running.put(jobId, run);
         Path file = null;
         String failure = READ_FAILED;
         try {
@@ -189,7 +190,8 @@ public class ExportWorker implements DisposableBean {
                         ? "Reading the data or writing the file failed" : "Storing the export file failed");
             }
         } finally {
-            running.remove(jobId);
+            // a replacement run of the same job may have started on this pod meanwhile
+            running.remove(jobId, run);
             deleteQuietly(file);
         }
     }

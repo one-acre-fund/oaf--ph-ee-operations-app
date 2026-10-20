@@ -160,6 +160,10 @@ class ExportJobServiceTest {
                 assertThrows(ExportException.class, () -> service.prepareDownload("running", user)).getStatus());
         assertEquals(HttpStatus.GONE,
                 assertThrows(ExportException.class, () -> service.prepareDownload("expired", user)).getStatus());
+        when(repository.findByJobIdAndRequestedBy(eq("cleaned-up"), anyString()))
+                .thenReturn(Optional.of(job(ExportStatus.EXPIRED, NOW)));
+        assertEquals(HttpStatus.GONE,
+                assertThrows(ExportException.class, () -> service.prepareDownload("cleaned-up", user)).getStatus());
         service.download(service.prepareDownload("ready", user), out);
         when(repository.findByJobIdAndRequestedBy(eq("no-expiry"), anyString()))
                 .thenReturn(Optional.of(job(ExportStatus.SUCCEEDED, null)));

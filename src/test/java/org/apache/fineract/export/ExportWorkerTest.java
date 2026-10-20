@@ -401,6 +401,35 @@ class ExportWorkerTest {
     }
 
     @Test
+    @DisplayName("A stale run that finishes on this pod leaves the replacement run to be handed back on shutdown")
+    void staleRunKeepsReplacement() throws InterruptedException {
+        ExportJob requeued = job(ExportType.TRANSFERS, ExportCriteria.builder().build(), DataScope.UNRESTRICTED);
+        ExportJob first = job(ExportType.TRANSFERS, ExportCriteria.builder().build(), DataScope.UNRESTRICTED);
+        requeued.setAttempts(1);
+        when(repository.findByJobId("job-1")).thenReturn(Optional.of(first), Optional.of(requeued));
+        when(repository.claim(eq("job-1"), eq(2), any())).thenReturn(1);
+        CountDownLatch replacementUploading = new CountDownLatch(1);
+        CountDownLatch finishReplacement = new CountDownLatch(1);
+        Thread replacement = new Thread(() -> worker.run("job-1"));
+        doAnswer(i -> {
+            if (i.<String>getArgument(0).endsWith("-2.csv")) {
+                replacementUploading.countDown();
+                return finishReplacement.await(5, TimeUnit.SECONDS);
+            }
+            replacement.start();
+            return replacementUploading.await(5, TimeUnit.SECONDS);
+        }).when(storage).upload(anyString(), any(Path.class));
+
+        worker.run("job-1");
+        worker.destroy();
+        finishReplacement.countDown();
+        replacement.join(5000);
+
+        verify(repository).release("job-1", 2);
+        verify(repository, never()).release("job-1", 1);
+    }
+
+    @Test
     @DisplayName("Jobs waiting in memory are expedited on shutdown, and not started afterwards")
     void shutdownExpeditesWaitingJobs() {
         ExportWorker queueing = new ExportWorker(task -> { }, tenantContext, repository, factory, storage, codec,

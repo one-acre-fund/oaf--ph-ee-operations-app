@@ -115,6 +115,9 @@ public class ExportJobService {
      */
     public ExportJob prepareDownload(String jobId, AppUser user) {
         ExportJob job = get(jobId, user);
+        if (job.getStatus() == ExportStatus.EXPIRED) {
+            throw new ExportException(HttpStatus.GONE, "Export " + jobId + " has expired; run it again");
+        }
         if (job.getStatus() != ExportStatus.SUCCEEDED) {
             throw new ExportException(HttpStatus.CONFLICT, "Export " + jobId + " is " + job.getStatus());
         }
