@@ -4,7 +4,7 @@ package org.apache.fineract.operations;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Getter;
 import lombok.Setter;
-import org.apache.fineract.organisation.parent.AbstractPersistableCustom;
+import org.apache.fineract.organisation.parent.VersionedPersistableCustom;
 import org.eclipse.persistence.annotations.Index;
 
 import javax.persistence.Column;
@@ -17,7 +17,7 @@ import java.util.Date;
 
 @Entity
 @Table(name = "transfers")
-public class Transfer extends AbstractPersistableCustom<Long> {
+public class Transfer extends VersionedPersistableCustom {
 
     @Column(name = "WORKFLOW_INSTANCE_KEY")
     @Index(name = "idx_paymentProcessId")
@@ -26,6 +26,7 @@ public class Transfer extends AbstractPersistableCustom<Long> {
 
     @Column(name = "ZEEBE_GENERATION")
     private Long zeebeGeneration;
+
 
     @Column(name = "TRANSACTION_ID")
     private String transactionId;
@@ -104,6 +105,7 @@ public class Transfer extends AbstractPersistableCustom<Long> {
     public void setZeebeGeneration(Long zeebeGeneration) {
         this.zeebeGeneration = zeebeGeneration;
     }
+
 
     public Date getCompletedAt() {
         return completedAt;
