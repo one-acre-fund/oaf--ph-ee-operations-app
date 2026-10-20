@@ -40,14 +40,16 @@ public interface ExportJobRepository extends JpaRepository<ExportJob, Long> {
     List<ExportJob> findByStatusAndExpiresAtBefore(ExportStatus status, LocalDateTime before, Pageable page);
 
     /**
-     * Moves a job from QUEUED to RUNNING and counts the attempt, so only one run (on any pod) gets it.
+     * Moves a job from QUEUED to RUNNING as run {@code attempt}, the attempts the caller read plus one, so only one
+     * run (on any pod) gets it and each run knows its own number.
      * @return 1 if this caller claimed the job, 0 if it was already claimed or is no longer queued
      */
     @Modifying
     @Transactional
     @Query("UPDATE ExportJob j SET j.status = " + STATUS + "RUNNING, j.startedAt = :now, j.heartbeatAt = :now, "
-            + "j.attempts = j.attempts + 1 WHERE j.jobId = :jobId AND j.status = " + STATUS + "QUEUED")
-    int claim(@Param("jobId") String jobId, @Param("now") LocalDateTime now);
+            + "j.attempts = :attempt WHERE j.jobId = :jobId AND j.attempts = :attempt - 1 AND j.status = " + STATUS
+            + "QUEUED")
+    int claim(@Param("jobId") String jobId, @Param("attempt") int attempt, @Param("now") LocalDateTime now);
 
     /** @return 0 if the job was taken back from this run */
     @Modifying

@@ -32,6 +32,8 @@ import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Optional;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -44,6 +46,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -103,15 +106,15 @@ class ExportWorkerTest {
     void setUp() {
         worker = new ExportWorker(Runnable::run, tenantContext, repository, factory, storage, codec,
                 new ExportDateFormatter("UTC"), properties, Clock.fixed(NOW, ZoneOffset.UTC));
-        when(storage.keyFor(anyString(), anyString())).thenAnswer(i -> "exports/" + i.getArgument(0) + "/"
-                + i.getArgument(1) + ".csv");
+        when(storage.keyFor(anyString(), anyString(), anyInt())).thenAnswer(i -> "exports/" + i.getArgument(0) + "/"
+                + i.getArgument(1) + "-" + i.getArgument(2) + ".csv");
         doAnswer(i -> {
             Path file = i.getArgument(1);
             uploadedFile.set(file);
             uploadedContent.set(new String(Files.readAllBytes(file), StandardCharsets.UTF_8));
             return null;
         }).when(storage).upload(anyString(), any(Path.class));
-        when(repository.claim(eq("job-1"), any())).thenReturn(1);
+        when(repository.claim(eq("job-1"), eq(1), any())).thenReturn(1);
         when(repository.heartbeat(anyString(), anyInt(), any())).thenReturn(1);
         when(repository.succeed(anyString(), anyInt(), anyLong(), anyLong(), anyString(), any(), any())).thenReturn(1);
         when(repository.fail(anyString(), anyInt(), anyString(), anyString(), any())).thenReturn(1);
@@ -131,7 +134,7 @@ class ExportWorkerTest {
         worker.run("job-1");
 
         verify(repository).succeed("job-1", 1, 3, uploadedContent.get().getBytes(StandardCharsets.UTF_8).length,
-                "exports/oaf/job-1.csv", NOW_UTC, NOW_UTC.plusHours(24));
+                "exports/oaf/job-1-1.csv", NOW_UTC, NOW_UTC.plusHours(24));
         String[] lines = uploadedContent.get().split("\r\n");
         assertTrue(lines[0].startsWith("﻿WORKFLOWINSTANCEKEY,"), lines[0]);
         assertEquals(4, lines.length);
@@ -220,12 +223,44 @@ class ExportWorkerTest {
     @Test
     @DisplayName("Does nothing when another worker already claimed the job")
     void alreadyClaimed() {
-        when(repository.claim(eq("job-1"), any())).thenReturn(0);
+        job(ExportType.TRANSFERS, ExportCriteria.builder().build(), DataScope.UNRESTRICTED);
+        when(repository.claim(eq("job-1"), eq(1), any())).thenReturn(0);
 
         worker.run("job-1");
 
-        verify(repository, never()).findByJobId(anyString());
+        verify(storage, never()).upload(anyString(), any(Path.class));
         verify(repository, never()).fail(anyString(), anyInt(), anyString(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("Claims a requeued job as the next attempt and uploads under that attempt's key")
+    void claimsNextAttempt() {
+        job(ExportType.TRANSFERS, ExportCriteria.builder().build(), DataScope.UNRESTRICTED).setAttempts(2);
+        when(repository.claim(eq("job-1"), eq(3), any())).thenReturn(1);
+
+        worker.run("job-1");
+
+        verify(repository).succeed(eq("job-1"), eq(3), eq(3L), anyLong(), eq("exports/oaf/job-1-3.csv"), any(),
+                any());
+    }
+
+    @Test
+    @DisplayName("Keeps the heartbeat going while uploading; a failed heartbeat does not stop the next ones")
+    void heartbeatsDuringUpload() {
+        job(ExportType.TRANSFERS, ExportCriteria.builder().build(), DataScope.UNRESTRICTED);
+        properties.setStaleAfter(Duration.ofMillis(4));
+        CountDownLatch beat = new CountDownLatch(1);
+        when(repository.heartbeat(anyString(), anyInt(), any())).thenThrow(new IllegalStateException("db busy"))
+                .thenAnswer(i -> {
+                    beat.countDown();
+                    return 1;
+                });
+        doAnswer(i -> beat.await(5, TimeUnit.SECONDS)).when(storage).upload(anyString(), any(Path.class));
+
+        worker.run("job-1");
+
+        assertEquals(0, beat.getCount());
+        verify(repository).succeed(eq("job-1"), eq(1), eq(3L), anyLong(), anyString(), any(), any());
     }
 
     @Test
@@ -256,15 +291,28 @@ class ExportWorkerTest {
     }
 
     @Test
-    @DisplayName("A run taken back just before finishing does not record a failure either")
+    @DisplayName("A run taken back just before finishing deletes its own file and does not record a failure")
     void takenBackWhileFinishing() {
+        job(ExportType.TRANSFERS, ExportCriteria.builder().build(), DataScope.UNRESTRICTED);
+        when(repository.succeed(anyString(), anyInt(), anyLong(), anyLong(), anyString(), any(), any())).thenReturn(0);
+        doThrow(new IllegalStateException("S3 down")).when(storage).delete(anyString());
+
+        worker.run("job-1");
+
+        verify(storage).delete("exports/oaf/job-1-1.csv");
+        verify(repository, never()).fail(anyString(), anyInt(), anyString(), anyString(), any());
+        assertFalse(Files.exists(uploadedFile.get()), "temp file deleted");
+    }
+
+    @Test
+    @DisplayName("A run taken back just before finishing leaves no file behind")
+    void takenBackWhileFinishingDeletesFile() {
         job(ExportType.TRANSFERS, ExportCriteria.builder().build(), DataScope.UNRESTRICTED);
         when(repository.succeed(anyString(), anyInt(), anyLong(), anyLong(), anyString(), any(), any())).thenReturn(0);
 
         worker.run("job-1");
 
-        verify(repository, never()).fail(anyString(), anyInt(), anyString(), anyString(), any());
-        assertFalse(Files.exists(uploadedFile.get()), "temp file deleted");
+        verify(storage).delete("exports/oaf/job-1-1.csv");
     }
 
     @Test
@@ -303,15 +351,17 @@ class ExportWorkerTest {
         worker.submit("oaf", "job-1");
 
         verify(tenantContext).runAs(eq("oaf"), any(Runnable.class));
-        verify(storage).upload(eq("exports/oaf/job-1.csv"), any(Path.class));
+        verify(storage).upload(eq("exports/oaf/job-1-1.csv"), any(Path.class));
     }
 
     @Test
-    @DisplayName("Fails loudly if a claimed job cannot be loaded")
-    void claimedJobMissing() {
+    @DisplayName("Skips a job that no longer exists")
+    void jobMissing() {
         when(repository.findByJobId("job-1")).thenReturn(Optional.empty());
 
-        assertThrows(IllegalStateException.class, () -> worker.run("job-1"));
+        worker.run("job-1");
+
+        verify(repository, never()).claim(anyString(), anyInt(), any());
     }
 
     @Test
@@ -363,7 +413,7 @@ class ExportWorkerTest {
         queueing.run("job-1");
 
         verify(repository).expedite("job-1");
-        verify(repository, never()).claim(anyString(), any());
+        verify(repository, never()).claim(anyString(), anyInt(), any());
     }
 
     @Test
@@ -398,16 +448,16 @@ class ExportWorkerTest {
         verify(repository, never()).fail(anyString(), anyInt(), anyString(), anyString(), any());
     }
 
-    private void job(ExportType type, ExportCriteria criteria, DataScope scope) {
+    private ExportJob job(ExportType type, ExportCriteria criteria, DataScope scope) {
         ExportJob job = new ExportJob();
         job.setJobId("job-1");
         job.setTenant("oaf");
         job.setType(type);
-        job.setStatus(ExportStatus.RUNNING);
+        job.setStatus(ExportStatus.QUEUED);
         job.setRequestedBy("ash");
         job.setFilters(codec.filtersToJson(criteria));
         job.setDataScope(codec.scopeToJson(scope));
-        job.setAttempts(1);
         when(repository.findByJobId("job-1")).thenReturn(Optional.of(job));
+        return job;
     }
 }

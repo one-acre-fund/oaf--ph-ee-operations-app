@@ -22,8 +22,9 @@ public class ExportStorage {
         this.properties = properties;
     }
 
-    public String keyFor(String tenant, String jobId) {
-        return properties.getStoragePrefix() + tenant + "/" + jobId + ".csv";
+    /** One key per run, so a run that was taken back cannot overwrite the file of the run that replaced it. */
+    public String keyFor(String tenant, String jobId, int attempt) {
+        return properties.getStoragePrefix() + tenant + "/" + jobId + "-" + attempt + ".csv";
     }
 
     public void upload(String key, Path file) {

@@ -32,12 +32,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
 import java.util.function.IntSupplier;
 
 /**
  * Runs export jobs on the bounded export pool: claim, read in chunks into a local CSV, upload, record the result.
  * Failures are logged with the job id and stored on the job; the local file is always deleted. While reading, the
- * run sends a heartbeat; if the job was taken back meanwhile (see {@link ExportScheduler}), the run stops quietly.
+ * run sends a heartbeat after each chunk, and during the upload from a separate thread; if the job was taken back
+ * meanwhile (see {@link ExportScheduler}), the run stops quietly.
  * When the pod shuts down, running and waiting jobs are handed back to the database at once, so another pod
  * continues them within one scheduler run instead of waiting for the heartbeat to go stale.
  */
@@ -69,6 +74,12 @@ public class ExportWorker implements DisposableBean {
 
     /** Jobs waiting in this pod's executor queue, by job id. */
     private final Map<String, String> waiting = new ConcurrentHashMap<>();
+
+    private final ScheduledExecutorService uploadHeartbeats = Executors.newSingleThreadScheduledExecutor(task -> {
+        Thread thread = new Thread(task, "export-heartbeat");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     private volatile boolean stopping;
 
@@ -111,6 +122,7 @@ public class ExportWorker implements DisposableBean {
         running.forEach((jobId, run) -> handBack(jobId, run.tenant,
                 () -> jobRepository.release(jobId, run.attempt)));
         waiting.forEach((jobId, tenant) -> handBack(jobId, tenant, () -> jobRepository.expedite(jobId)));
+        uploadHeartbeats.shutdownNow();
     }
 
     private void handBack(String jobId, String tenant, IntSupplier update) {
@@ -131,14 +143,17 @@ public class ExportWorker implements DisposableBean {
             logger.info("Export {} left in the queue: this pod is shutting down", jobId);
             return;
         }
+        ExportJob job = jobRepository.findByJobId(jobId).orElse(null);
+        if (job == null) {
+            logger.warn("Export {} not found", jobId);
+            return;
+        }
+        int attempt = job.getAttempts() + 1;
         LocalDateTime claimedAt = LocalDateTime.now(clock);
-        if (jobRepository.claim(jobId, claimedAt) == 0) {
+        if (jobRepository.claim(jobId, attempt, claimedAt) == 0) {
             logger.info("Export {} was already claimed or is no longer queued", jobId);
             return;
         }
-        ExportJob job = jobRepository.findByJobId(jobId)
-                .orElseThrow(() -> new IllegalStateException("Claimed export " + jobId + " not found"));
-        int attempt = job.getAttempts();
         running.put(jobId, new Run(job.getTenant(), attempt));
         Path file = null;
         String failure = READ_FAILED;
@@ -147,11 +162,12 @@ public class ExportWorker implements DisposableBean {
             Progress progress = new Progress(jobId, attempt, claimedAt);
             long rows = writeCsv(job, codec.fromJson(job.getFilters(), job.getDataScope()), file, progress);
             failure = UPLOAD_FAILED;
-            String key = storage.keyFor(job.getTenant(), jobId);
-            storage.upload(key, file);
+            String key = storage.keyFor(job.getTenant(), jobId, attempt);
+            upload(job.getTenant(), jobId, attempt, key, file);
             LocalDateTime now = LocalDateTime.now(clock);
             if (jobRepository.succeed(jobId, attempt, rows, Files.size(file), key, now,
                     now.plus(properties.getTtl())) == 0) {
+                deleteUpload(jobId, key);
                 throw new TakenBackException();
             }
             logger.info("Export {} finished with {} rows", jobId, rows);
@@ -196,6 +212,35 @@ public class ExportWorker implements DisposableBean {
                 writer.writeAll(chunk);
                 progress.afterChunk(chunk.size());
             });
+        }
+    }
+
+    /** Keeps the heartbeat going while the file uploads; a large file can take longer than {@code staleAfter}. */
+    private void upload(String tenant, String jobId, int attempt, String key, Path file) {
+        long every = Math.max(1, properties.getStaleAfter().dividedBy(4).toMillis());
+        ScheduledFuture<?> heartbeat = uploadHeartbeats.scheduleAtFixedRate(
+                () -> uploadHeartbeat(tenant, jobId, attempt), every, every, TimeUnit.MILLISECONDS);
+        try {
+            storage.upload(key, file);
+        } finally {
+            heartbeat.cancel(false);
+        }
+    }
+
+    /** Never throws: an exception would silently cancel the remaining heartbeats. */
+    private void uploadHeartbeat(String tenant, String jobId, int attempt) {
+        try {
+            tenantContext.runAs(tenant, () -> jobRepository.heartbeat(jobId, attempt, LocalDateTime.now(clock)));
+        } catch (RuntimeException e) {
+            logger.warn("Export {} run {}: heartbeat during upload failed", jobId, attempt, e);
+        }
+    }
+
+    private void deleteUpload(String jobId, String key) {
+        try {
+            storage.delete(key);
+        } catch (RuntimeException e) {
+            logger.warn("Export {}: could not delete the file of a run that was taken back", jobId, e);
         }
     }
 

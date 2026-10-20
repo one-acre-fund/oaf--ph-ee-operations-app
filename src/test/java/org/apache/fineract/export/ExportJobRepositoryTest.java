@@ -55,12 +55,15 @@ class ExportJobRepositoryTest {
     }
 
     @Test
-    @DisplayName("Only one claim wins; it counts the attempt and starts the heartbeat")
+    @DisplayName("Only one claim wins, and only with the next attempt number; it starts the heartbeat")
     void claim() {
         save("a", ExportStatus.QUEUED, 0, null);
+        save("requeued", ExportStatus.QUEUED, 1, null);
 
-        assertEquals(1, repository.claim("a", NOW));
-        assertEquals(0, repository.claim("a", NOW));
+        assertEquals(1, repository.claim("a", 1, NOW));
+        assertEquals(0, repository.claim("a", 1, NOW));
+        assertEquals(0, repository.claim("requeued", 1, NOW));
+        assertEquals(1, repository.claim("requeued", 2, NOW));
 
         ExportJob job = load("a");
         assertEquals(ExportStatus.RUNNING, job.getStatus());
