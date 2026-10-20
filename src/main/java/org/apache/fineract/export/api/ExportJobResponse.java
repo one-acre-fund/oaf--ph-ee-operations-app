@@ -21,6 +21,8 @@ public class ExportJobResponse {
     private final LocalDateTime startedAt;
     private final LocalDateTime completedAt;
     private final LocalDateTime expiresAt;
+    /** Times the export was started; above 1 means it was restarted after an interruption. */
+    private final int attempts;
     private final String statusUrl;
     private final String downloadUrl;
     private final Error error;
@@ -35,6 +37,7 @@ public class ExportJobResponse {
         this.startedAt = job.getStartedAt();
         this.completedAt = job.getCompletedAt();
         this.expiresAt = job.getExpiresAt();
+        this.attempts = job.getAttempts();
         this.statusUrl = ExportController.PATH + "/" + job.getJobId();
         this.downloadUrl = job.getStatus() == ExportStatus.SUCCEEDED ? statusUrl + "/download" : null;
         this.error = job.getErrorCode() == null ? null : new Error(job.getErrorCode(), job.getErrorMessage());

@@ -33,4 +33,8 @@ public class ExportStorage {
     public void copyTo(String key, OutputStream out) {
         fileTransferService.downloadFile(key, bucketName, out);
     }
+
+    public void delete(String key) {
+        fileTransferService.deleteFile(key, bucketName);
+    }
 }

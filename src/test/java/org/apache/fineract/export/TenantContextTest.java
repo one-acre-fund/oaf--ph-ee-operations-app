@@ -7,6 +7,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
@@ -36,6 +37,19 @@ class TenantContextTest {
         assertThrows(IllegalStateException.class, () -> context.runAs("oaf", () -> {
             throw new IllegalStateException("boom");
         }));
+
+        assertSame(oaf, seen.get());
+        assertNull(ThreadLocalContextUtil.getTenant());
+    }
+
+    @Test
+    @DisplayName("Lists every tenant and runs work for a tenant it already has")
+    void allTenants() {
+        TenantServerConnection oaf = new TenantServerConnection();
+        when(repository.findAll()).thenReturn(Collections.singletonList(oaf));
+        AtomicReference<TenantServerConnection> seen = new AtomicReference<>();
+
+        context.runAs(context.allTenants().get(0), () -> seen.set(ThreadLocalContextUtil.getTenant()));
 
         assertSame(oaf, seen.get());
         assertNull(ThreadLocalContextUtil.getTenant());
