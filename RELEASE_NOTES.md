@@ -1,6 +1,11 @@
 Release Notes
 
 
+## Version 1.1.19 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * Export
+            * [FD-1929] - Recover interrupted exports: hand jobs back on shutdown, requeue runs whose heartbeat stopped, any pod picks up waiting jobs; delete expired export files; cap exports at export.max-rows; attempts in the job status
+
 ## Version 1.1.18 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * Export
