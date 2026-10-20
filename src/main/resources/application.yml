@@ -99,6 +99,10 @@ payment:
     - id: "slcb"
       type: "BATCH"
 
+export:
+  async:
+    enabled: false
+
 application:
   bucket-name: paymenthub-ee-dev
 

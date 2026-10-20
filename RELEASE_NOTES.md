@@ -1,6 +1,11 @@
 Release Notes
 
 
+## Version 1.1.18 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * Export
+            * [FD-1929] - Add async export API (POST/GET /api/v1/exports, streamed download) and export worker, behind export.async.enabled (off by default)
+
 ## Version 1.1.17 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * Export

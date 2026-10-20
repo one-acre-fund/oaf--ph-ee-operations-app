@@ -18,12 +18,12 @@ import java.util.function.Consumer;
 /**
  * EclipseLink on an in-memory H2 database (MySQL mode) with only the payment entities, for reader tests.
  */
-final class H2Entities {
+public final class H2Entities {
 
     private H2Entities() {
     }
 
-    static EntityManagerFactory create(String name) {
+    public static EntityManagerFactory create(String name) {
         JdbcDataSource dataSource = new JdbcDataSource();
         dataSource.setURL("jdbc:h2:mem:" + name + ";MODE=MySQL;DB_CLOSE_DELAY=-1");
 
@@ -47,7 +47,7 @@ final class H2Entities {
         return new PersistenceProvider().createContainerEntityManagerFactory(unit, properties);
     }
 
-    static void inTransaction(EntityManagerFactory factory, Consumer<EntityManager> work) {
+    public static void inTransaction(EntityManagerFactory factory, Consumer<EntityManager> work) {
         EntityManager em = factory.createEntityManager();
         try {
             em.getTransaction().begin();

@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -70,5 +71,15 @@ public class AzureFileTransferImpl implements FileTransferService {
     @Override
     public void deleteFile(String fileName, String bucketName) {
         client.containerName(bucketName).blobName(fileName).buildClient().delete();
+    }
+
+    @Override
+    public void uploadFile(String key, File file, String bucketName) {
+        client.containerName(bucketName).blobName(key).buildClient().uploadFromFile(file.getPath(), true);
+    }
+
+    @Override
+    public void downloadFile(String key, String bucketName, OutputStream out) {
+        client.containerName(bucketName).blobName(key).buildClient().download(out);
     }
 }

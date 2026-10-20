@@ -7,12 +7,17 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collection;
+import java.util.List;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface ExportJobRepository extends JpaRepository<ExportJob, Long> {
 
+    Optional<ExportJob> findByJobId(String jobId);
+
     Optional<ExportJob> findByJobIdAndRequestedBy(String jobId, String requestedBy);
+
+    List<ExportJob> findByRequestedByAndCreatedDateAfterOrderByCreatedDateDesc(String requestedBy, LocalDateTime after);
 
     long countByRequestedByAndStatusIn(String requestedBy, Collection<ExportStatus> statuses);
 

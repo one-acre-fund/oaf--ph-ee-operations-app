@@ -167,6 +167,30 @@ class AzureFileTransferImplTest {
         verify(blobClient).downloadToFile(temp.toString(), true);
     }
 
+    @DisplayName("uploadFile with a key uploads the file under that key, overwriting")
+    @Test
+    void testUploadFileWithKey() throws Exception {
+        File file = Files.write(tempDir.resolve("export.csv"), "a,b".getBytes(StandardCharsets.UTF_8)).toFile();
+
+        service.uploadFile("exports/oaf/job-1.csv", file, CONTAINER);
+
+        verify(builder).containerName(CONTAINER);
+        verify(builder).blobName("exports/oaf/job-1.csv");
+        verify(blobClient).uploadFromFile(file.getPath(), true);
+        assertTrue(file.exists(), "Local file is left for the caller");
+    }
+
+    @DisplayName("downloadFile with an output stream streams the blob into it")
+    @Test
+    void testDownloadFileToStream() {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+
+        service.downloadFile("exports/oaf/job-1.csv", CONTAINER, out);
+
+        verify(builder).blobName("exports/oaf/job-1.csv");
+        verify(blobClient).download(out);
+    }
+
     @DisplayName("deleteFile deletes the blob")
     @Test
     void testDeleteFile() {
