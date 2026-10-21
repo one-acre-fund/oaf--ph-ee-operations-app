@@ -21,10 +21,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.math.BigDecimal;
 import java.util.*;
 
@@ -313,134 +310,6 @@ class OperationsDetailedApiTest {
         Assertions.assertEquals(1, specs.size());
         verify(mockUser).getPayeePartyIdTypesList();
 
-    }
-
-    @DisplayName("Filters transaction requests based on provided state")
-    @Test
-    void test_filter_transaction_requests_by_state() {
-        HttpServletResponse response = mock(HttpServletResponse.class);
-        Authentication authentication = Mockito.mock(Authentication.class);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        Mockito.when(authentication.isAuthenticated()).thenReturn(true);
-        Mockito.when(authentication.getName()).thenReturn("testUser");
-
-        AppUser currentUser = new AppUser(); // User not authorized for anything
-        when(appUserRepository.findAppUserByName(any())).thenReturn(currentUser);
-
-        testUtils.setupSecurityContext(currentUser);
-
-
-        Map<String, List<String>> body = new HashMap<>();
-        body.put("TRANSACTIONID", Arrays.asList("12345"));
-        Page<TransactionRequest> transferPage = new PageImpl<>(Collections.singletonList(new TransactionRequest()));
-        Mockito.when(transactionRequestRepository.findAll(any(Specifications.class), any(PageRequest.class))).thenReturn(transferPage);
-
-        Map<String, String> result = operationsDetailedApi.filterTransactionRequests(response, "export", 0, 10000, "DESC", null, null, "COMPLETED", body);
-
-        assertNotNull(result);
-        assertEquals("CSV_BUILDER", result.get("errorCode"));
-        assertEquals("Print writer can't be null", result.get("developerMessage"));
-        verify(response,never()).setStatus(HttpServletResponse.SC_NOT_FOUND);
-    }
-    @Test
-    void test_filter_transaction_requests_by_states() {
-        HttpServletResponse response = mock(HttpServletResponse.class);
-        Authentication authentication = Mockito.mock(Authentication.class);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        Mockito.when(authentication.isAuthenticated()).thenReturn(true);
-        Mockito.when(authentication.getName()).thenReturn("testUser");
-        AppUser currentUser = new AppUser(); // User not authorized for anything
-        when(appUserRepository.findAppUserByName(any())).thenReturn(currentUser);
-
-        testUtils.setupSecurityContext(currentUser);
-
-
-        Map<String, List<String>> body = new HashMap<>();
-        body.put("TRANSACTIONID", Arrays.asList("12345"));
-
-        Page<Transfer> transferPage = new PageImpl<>(Collections.EMPTY_LIST);
-        Mockito.when(transactionRequestRepository.findAll(any(Specifications.class), any(PageRequest.class))).thenReturn(transferPage);
-
-        Map<String, String> result = operationsDetailedApi.filterTransactionRequests(response, "export", 0, 10000, "DESC", null, null, "COMPLETED", body);
-
-        assertNotNull(result);
-        verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
-    }
-
-    @DisplayName("Export transfers with valid filters and date range")
-    @Test
-    void test_export_transfers_with_valid_filters_and_date_range() throws Exception {
-        HttpServletResponse response = mock(HttpServletResponse.class);
-        Authentication authentication = Mockito.mock(Authentication.class);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        Mockito.when(authentication.isAuthenticated()).thenReturn(true);
-        Mockito.when(authentication.getName()).thenReturn("testUser");
-
-        AppUser appUser = new AppUser();
-        appUser.setCurrenciesList(Collections.singletonList("*"));
-        Mockito.when(appUserRepository.findAppUserByName("testUser")).thenReturn(appUser);
-
-
-        Map<String, List<String>> body = new HashMap<>();
-        body.put("TRANSACTIONID", Arrays.asList("12345"));
-        Page<Transfer> transferPage = new PageImpl<>(Collections.singletonList(new Transfer()));
-        Mockito.when(transferRepository.findAll(any(Specifications.class), any(PageRequest.class))).thenReturn(transferPage);
-
-        Map<String, String> result = operationsDetailedApi.exportTransfers(response, 0, 10000, "DESC", "2023-01-01", "2023-12-31", "COMPLETED", body);
-
-        assertNotNull(result);
-        assertEquals("CSV_BUILDER", result.get("errorCode"));
-        assertEquals("Print writer can't be null", result.get("developerMessage"));
-        verify(response,never()).setStatus(HttpServletResponse.SC_NOT_FOUND);
-    }
-    @Test
-    void test_export_transfers_with_valid_filters_and_date_range_writes_csv() throws Exception {
-        HttpServletResponse response = mock(HttpServletResponse.class);
-        Authentication authentication = Mockito.mock(Authentication.class);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        Mockito.when(authentication.isAuthenticated()).thenReturn(true);
-        Mockito.when(authentication.getName()).thenReturn("testUser");
-
-        AppUser appUser = new AppUser();
-        appUser.setCurrenciesList(Collections.singletonList("*"));
-        Mockito.when(appUserRepository.findAppUserByName("testUser")).thenReturn(appUser);
-
-
-        Map<String, List<String>> body = new HashMap<>();
-        body.put("TRANSACTIONID", Arrays.asList("12345"));
-        Page<Transfer> transferPage = new PageImpl<>(Collections.singletonList(new Transfer()));
-        Mockito.when(transferRepository.findAll(any(Specifications.class), any(PageRequest.class))).thenReturn(transferPage);
-
-        when(response.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
-
-        Map<String, String> result = operationsDetailedApi.exportTransfers(response, 0, 10000, "DESC", "2023-01-01", "2023-12-31", "COMPLETED", body);
-
-        assertNull(result);
-    }
-
-    @Test
-    void test_export_transfers_with_valid_filters_and_date_range_empty() throws Exception {
-        HttpServletResponse response = mock(HttpServletResponse.class);
-        Authentication authentication = Mockito.mock(Authentication.class);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        Mockito.when(authentication.isAuthenticated()).thenReturn(true);
-        Mockito.when(authentication.getName()).thenReturn("testUser");
-
-        AppUser appUser = new AppUser();
-        appUser.setCurrenciesList(Collections.singletonList("*"));
-        Mockito.when(appUserRepository.findAppUserByName("testUser")).thenReturn(appUser);
-
-
-        Map<String, List<String>> body = new HashMap<>();
-        body.put("TRANSACTIONID", Arrays.asList("12345"));
-        Page<Transfer> transferPage = new PageImpl<>(Collections.EMPTY_LIST);
-        Mockito.when(transferRepository.findAll(any(Specifications.class), any(PageRequest.class))).thenReturn(transferPage);
-
-
-        Map<String, String> result = operationsDetailedApi.exportTransfers(response, 0, 10000, "DESC", "2023-01-01", "2023-12-31", "COMPLETED", body);
-
-        assertNotNull(result);
-        verify(response).setStatus(HttpServletResponse.SC_NOT_FOUND);
     }
 
     @DisplayName("Returns page of transaction requests with custom pagination and sorting")

@@ -4,7 +4,6 @@ import org.apache.fineract.organisation.tenant.TenantServerConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,7 +26,6 @@ import java.util.function.Consumer;
  * </ul>
  */
 @Component
-@ConditionalOnProperty(name = "export.async.enabled", havingValue = "true")
 public class ExportScheduler {
 
     static final String ABANDONED = "ABANDONED";

@@ -12,7 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.task.TaskExecutor;
 import org.springframework.stereotype.Component;
 
@@ -47,7 +46,6 @@ import java.util.function.IntSupplier;
  * continues them within one scheduler run instead of waiting for the heartbeat to go stale.
  */
 @Component
-@ConditionalOnProperty(name = "export.async.enabled", havingValue = "true")
 public class ExportWorker implements DisposableBean {
 
     static final String READ_FAILED = "READ_FAILED";
