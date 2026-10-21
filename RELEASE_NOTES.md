@@ -1,6 +1,11 @@
 Release Notes
 
 
+## Version 1.1.20 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * Export
+            * [FD-1929] - Remove the legacy CSV export endpoints (POST /api/v1/transfers/export, POST /api/v1/transactionRequests); the async export API is always on and export.async.enabled is gone
+
 ## Version 1.1.19 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * Export
