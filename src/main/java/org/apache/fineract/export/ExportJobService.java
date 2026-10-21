@@ -8,7 +8,6 @@ import org.apache.fineract.organisation.user.AppUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -28,7 +27,6 @@ import java.util.stream.Collectors;
  * room; otherwise they wait in the database until {@link ExportScheduler} hands them to a pod with a free thread.
  */
 @Service
-@ConditionalOnProperty(name = "export.async.enabled", havingValue = "true")
 public class ExportJobService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());

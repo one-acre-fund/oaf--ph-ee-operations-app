@@ -4,7 +4,6 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.apache.fineract.core.service.ThreadLocalContextUtil;
 import org.apache.fineract.export.ExportJob;
 import org.apache.fineract.export.ExportJobService;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +23,6 @@ import java.util.stream.Collectors;
 @RestController
 @SecurityRequirement(name = "BearerAuth")
 @RequestMapping(ExportController.PATH)
-@ConditionalOnProperty(name = "export.async.enabled", havingValue = "true")
 public class ExportController {
 
     public static final String PATH = "/api/v1/exports";
