@@ -73,7 +73,7 @@ dependencies {
 }
 
 group = 'org.apache.fineract'
-version = 'v1.1.18'
+version = 'v1.1.19'
 sourceCompatibility = '11'
 
 

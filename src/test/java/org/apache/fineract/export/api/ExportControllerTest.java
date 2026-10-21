@@ -83,6 +83,7 @@ class ExportControllerTest {
         succeeded.setStartedAt(LocalDateTime.of(2026, 10, 19, 9, 31));
         succeeded.setCompletedAt(LocalDateTime.of(2026, 10, 19, 9, 32));
         succeeded.setExpiresAt(LocalDateTime.of(2026, 10, 20, 9, 32));
+        succeeded.setAttempts(2);
         when(service.get("job-1", user)).thenReturn(succeeded);
 
         ExportJobResponse done = controller.get("job-1");
@@ -96,6 +97,7 @@ class ExportControllerTest {
         assertEquals(LocalDateTime.of(2026, 10, 19, 9, 31), done.getStartedAt());
         assertEquals(LocalDateTime.of(2026, 10, 19, 9, 32), done.getCompletedAt());
         assertEquals(LocalDateTime.of(2026, 10, 20, 9, 32), done.getExpiresAt());
+        assertEquals(2, done.getAttempts());
         assertEquals("/api/v1/exports/job-1", done.getStatusUrl());
         assertNull(done.getError());
         assertEquals("/api/v1/exports/job-1/download", done.getDownloadUrl());

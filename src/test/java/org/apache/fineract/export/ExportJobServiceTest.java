@@ -7,7 +7,6 @@ import org.apache.fineract.organisation.user.AppUser;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 import org.springframework.core.task.TaskRejectedException;
 import org.springframework.http.HttpStatus;
 
@@ -96,21 +95,16 @@ class ExportJobServiceTest {
     }
 
     @Test
-    @DisplayName("When the export queue is full the job is marked FAILED and the caller gets 503")
-    void queueFull() {
+    @DisplayName("When the export pool is full the job stays QUEUED in the database for the scheduler")
+    void poolFull() {
         doThrow(new TaskRejectedException("full")).when(worker).submit(anyString(), anyString());
-        ArgumentCaptor<ExportJob> saved = ArgumentCaptor.forClass(ExportJob.class);
 
-        ExportRequest request = ExportFilterValidatorTest.request(ExportType.TRANSFERS, null, null, null);
+        ExportJob job = service.create(ExportFilterValidatorTest.request(ExportType.TRANSFERS, null, null, null),
+                user, "oaf");
 
-        ExportException e = assertThrows(ExportException.class, () -> service.create(request, user, "oaf"));
-
-        assertEquals(HttpStatus.SERVICE_UNAVAILABLE, e.getStatus());
-        verify(repository, times(2)).save(saved.capture());
-        ExportJob job = saved.getValue();
-        assertEquals(ExportStatus.FAILED, job.getStatus());
-        assertEquals(ExportJobService.QUEUE_FULL, job.getErrorCode());
-        assertEquals(NOW, job.getCompletedAt());
+        assertEquals(ExportStatus.QUEUED, job.getStatus());
+        assertEquals(NOW, job.getHeartbeatAt());
+        verify(repository, times(1)).save(any(ExportJob.class));
     }
 
     @Test
@@ -166,6 +160,10 @@ class ExportJobServiceTest {
                 assertThrows(ExportException.class, () -> service.prepareDownload("running", user)).getStatus());
         assertEquals(HttpStatus.GONE,
                 assertThrows(ExportException.class, () -> service.prepareDownload("expired", user)).getStatus());
+        when(repository.findByJobIdAndRequestedBy(eq("cleaned-up"), anyString()))
+                .thenReturn(Optional.of(job(ExportStatus.EXPIRED, NOW)));
+        assertEquals(HttpStatus.GONE,
+                assertThrows(ExportException.class, () -> service.prepareDownload("cleaned-up", user)).getStatus());
         service.download(service.prepareDownload("ready", user), out);
         when(repository.findByJobIdAndRequestedBy(eq("no-expiry"), anyString()))
                 .thenReturn(Optional.of(job(ExportStatus.SUCCEEDED, null)));

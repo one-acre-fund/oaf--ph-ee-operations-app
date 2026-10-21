@@ -24,13 +24,12 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * A job is only ever visible to the user who requested it.
+ * A job is only ever visible to the user who requested it. New jobs go straight to the worker when the pool has
+ * room; otherwise they wait in the database until {@link ExportScheduler} hands them to a pod with a free thread.
  */
 @Service
 @ConditionalOnProperty(name = "export.async.enabled", havingValue = "true")
 public class ExportJobService {
-
-    static final String QUEUE_FULL = "QUEUE_FULL";
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -77,18 +76,13 @@ public class ExportJobService {
         job.setRequestedBy(user.getUsername());
         job.setFilters(codec.filtersToJson(criteria));
         job.setDataScope(codec.scopeToJson(scope));
+        job.setHeartbeatAt(LocalDateTime.now(clock));
         job = jobRepository.save(job);
 
         try {
             worker.submit(tenant, job.getJobId());
         } catch (TaskRejectedException e) {
-            logger.warn("Export {} refused: export queue is full", job.getJobId());
-            job.setStatus(ExportStatus.FAILED);
-            job.setErrorCode(QUEUE_FULL);
-            job.setErrorMessage("Too many exports are running; try again in a few minutes");
-            job.setCompletedAt(LocalDateTime.now(clock));
-            jobRepository.save(job);
-            throw new ExportException(HttpStatus.SERVICE_UNAVAILABLE, job.getErrorMessage());
+            logger.info("Export {} waits in the database: the export pool is full", job.getJobId());
         }
         return job;
     }
@@ -121,6 +115,9 @@ public class ExportJobService {
      */
     public ExportJob prepareDownload(String jobId, AppUser user) {
         ExportJob job = get(jobId, user);
+        if (job.getStatus() == ExportStatus.EXPIRED) {
+            throw new ExportException(HttpStatus.GONE, "Export " + jobId + " has expired; run it again");
+        }
         if (job.getStatus() != ExportStatus.SUCCEEDED) {
             throw new ExportException(HttpStatus.CONFLICT, "Export " + jobId + " is " + job.getStatus());
         }

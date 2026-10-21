@@ -1,5 +1,6 @@
 package org.apache.fineract.export.read;
 
+import org.apache.fineract.export.ExportJob;
 import org.apache.fineract.operations.TransactionRequest;
 import org.apache.fineract.operations.Transfer;
 import org.apache.fineract.operations.Variable;
@@ -16,7 +17,7 @@ import java.util.Map;
 import java.util.function.Consumer;
 
 /**
- * EclipseLink on an in-memory H2 database (MySQL mode) with only the payment entities, for reader tests.
+ * EclipseLink on an in-memory H2 database (MySQL mode) with only the payment and export job entities.
  */
 public final class H2Entities {
 
@@ -37,6 +38,7 @@ public final class H2Entities {
         unit.addManagedClassName(Transfer.class.getName());
         unit.addManagedClassName(TransactionRequest.class.getName());
         unit.addManagedClassName(Variable.class.getName());
+        unit.addManagedClassName(ExportJob.class.getName());
 
         Map<String, Object> properties = new HashMap<>();
         properties.put("eclipselink.weaving", "false");
