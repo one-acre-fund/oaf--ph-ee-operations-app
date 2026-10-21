@@ -1,6 +1,11 @@
 Release Notes
 
 
+## Version 1.1.21 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * CI
+            * [FD-1929] - Run the Sonar job on Java 17; Gradle 7.5.1 cannot compile the build script on Java 21
+
 ## Version 1.1.20 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * Export
