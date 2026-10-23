@@ -27,14 +27,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Tests for the MySQL 8.0 upgrade change: {@code fw.repair()} is conditionally
- * called before {@code fw.migrate()} in the tenant Flyway migration flow,
- * controlled by the {@code fineract.flyway.repair-on-startup} property.
+ * Tests for the {@code fineract.flyway.repair-on-startup} flag in the tenant Flyway flow.
  * <p>
- * This is needed because migration files V22, V47, and V48 were modified
- * (backtick-escaping the 'grouping' keyword), which changes their Flyway
- * checksums. {@code repair()} updates stored checksums to match, preventing
- * checksum mismatch errors on existing databases.
+ * Flyway 2.1.1 {@code repair()} runs its DELETE outside a transaction, and the tenant pools
+ * hand out connections with autocommit off, so the failed rows were rolled back and the flag
+ * never did anything. The service now deletes the failed schema_version rows itself on a
+ * connection from the tenant data source and commits, before {@code migrate()}.
  */
 class FlywayRepairMigrationTest {
 
@@ -42,6 +40,7 @@ class FlywayRepairMigrationTest {
     private TenantServerConnectionRepository repository;
     private Connection mockConn;
     private Statement mockStmt;
+    private DataSource dataSource;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -49,7 +48,7 @@ class FlywayRepairMigrationTest {
 
         repository = mock(TenantServerConnectionRepository.class);
         DataSourcePerTenantService dataSourcePerTenantService = mock(DataSourcePerTenantService.class);
-        DataSource dataSource = mock(DataSource.class);
+        dataSource = mock(DataSource.class);
         mockConn = mock(Connection.class);
         mockStmt = mock(Statement.class);
 
@@ -70,6 +69,7 @@ class FlywayRepairMigrationTest {
         ReflectionTestUtils.setField(service, "tenants", Arrays.asList("oaf"));
 
         when(dataSourcePerTenantService.retrieveDataSource()).thenReturn(dataSource);
+        when(dataSource.getConnection()).thenReturn(mockConn);
         when(mockConn.createStatement()).thenReturn(mockStmt);
         Mockito.doReturn(mockConn)
                 .when(service)
@@ -77,8 +77,8 @@ class FlywayRepairMigrationTest {
     }
 
     @Test
-    @DisplayName("repair() is called before migrate() when flywayRepairOnStartup is true")
-    void shouldCallRepairBeforeMigrate() throws Exception {
+    @DisplayName("failed schema_version rows are deleted and committed before migrate() when flywayRepairOnStartup is true")
+    void shouldDeleteFailedRowsAndCommitBeforeMigrate() throws Exception {
         // Arrange
         TenantServerConnection tenant = new TenantServerConnection();
         tenant.setSchemaName("oaf");
@@ -88,20 +88,22 @@ class FlywayRepairMigrationTest {
         when(mockStmt.executeUpdate(Mockito.anyString())).thenReturn(1);
 
         // Act
-        try (MockedConstruction<Flyway> flywayMock = Mockito.mockConstruction(Flyway.class, (mock, ctx) ->
-            when(mock.migrate()).thenReturn(0)
-        )) {
+        try (MockedConstruction<Flyway> flywayMock = Mockito.mockConstruction(Flyway.class, (mock, ctx) -> {
+            when(mock.migrate()).thenReturn(0);
+            when(mock.getDataSource()).thenReturn(dataSource);
+        })) {
             service.setupEnvironment();
 
             assertEquals(2, flywayMock.constructed().size(),
                     "Expected 2 Flyway instances: one for core schema, one for tenant");
 
             Flyway tenantFlyway = flywayMock.constructed().get(1);
-            verify(tenantFlyway, times(1)).repair();
+            verify(tenantFlyway, never()).repair();
             verify(tenantFlyway, times(1)).migrate();
 
-            InOrder inOrder = Mockito.inOrder(tenantFlyway);
-            inOrder.verify(tenantFlyway).repair();
+            InOrder inOrder = Mockito.inOrder(mockStmt, mockConn, tenantFlyway);
+            inOrder.verify(mockStmt).executeUpdate("DELETE FROM `oaf`.`schema_version` WHERE success = 0");
+            inOrder.verify(mockConn).commit();
             inOrder.verify(tenantFlyway).migrate();
         }
     }
