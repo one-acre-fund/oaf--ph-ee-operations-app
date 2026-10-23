@@ -133,7 +133,8 @@ public class TenantDatabaseUpgradeService {
     private void repairFailedMigrations(Flyway fw, String schema) {
         try (Connection connection = fw.getDataSource().getConnection();
              Statement statement = connection.createStatement()) {
-            int removed = statement.executeUpdate("DELETE FROM `" + schema + "`.`schema_version` WHERE success = 0");
+            connection.setCatalog(schema);
+            int removed = statement.executeUpdate("DELETE FROM schema_version WHERE success = 0");
             connection.commit();
             logger.warn("Flyway repair removed {} failed migration rows for tenant: {}", removed, schema);
         } catch (SQLException e) {

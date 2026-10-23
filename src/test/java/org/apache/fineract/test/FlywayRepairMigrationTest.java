@@ -102,7 +102,8 @@ class FlywayRepairMigrationTest {
             verify(tenantFlyway, times(1)).migrate();
 
             InOrder inOrder = Mockito.inOrder(mockStmt, mockConn, tenantFlyway);
-            inOrder.verify(mockStmt).executeUpdate("DELETE FROM `oaf`.`schema_version` WHERE success = 0");
+            inOrder.verify(mockConn).setCatalog("oaf");
+            inOrder.verify(mockStmt).executeUpdate("DELETE FROM schema_version WHERE success = 0");
             inOrder.verify(mockConn).commit();
             inOrder.verify(tenantFlyway).migrate();
         }
