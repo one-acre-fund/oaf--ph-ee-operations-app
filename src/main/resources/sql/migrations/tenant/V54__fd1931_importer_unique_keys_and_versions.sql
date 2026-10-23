@@ -45,22 +45,28 @@ DELETE a FROM batches a JOIN dup_batches d ON d.ID = a.ID;
 DROP TEMPORARY TABLE dup_batches;
 
 -- Optimistic lock for the rows the importer updates in place. Existing rows read as version 0.
-ALTER TABLE transfers ADD COLUMN VERSION BIGINT NOT NULL DEFAULT 0;
-ALTER TABLE transaction_requests ADD COLUMN VERSION BIGINT NOT NULL DEFAULT 0;
-ALTER TABLE batches ADD COLUMN VERSION BIGINT NOT NULL DEFAULT 0;
+-- Every ALTER below skips what already exists: MySQL commits DDL implicitly, so a run that fails
+-- halfway (seen in acc-qa, 2026-10-22) leaves the earlier columns and keys in place and the
+-- migration must be rerunnable after the failed row is removed.
+SET @sql = (SELECT IF(EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'transfers' AND COLUMN_NAME = 'VERSION'), 'SELECT 1', 'ALTER TABLE transfers ADD COLUMN VERSION BIGINT NOT NULL DEFAULT 0'));
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql = (SELECT IF(EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'transaction_requests' AND COLUMN_NAME = 'VERSION'), 'SELECT 1', 'ALTER TABLE transaction_requests ADD COLUMN VERSION BIGINT NOT NULL DEFAULT 0'));
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql = (SELECT IF(EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'batches' AND COLUMN_NAME = 'VERSION'), 'SELECT 1', 'ALTER TABLE batches ADD COLUMN VERSION BIGINT NOT NULL DEFAULT 0'));
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- MySQL lets any number of NULLs through a unique index and an ordinary transfer has
 -- TRANSACTION_ID NULL until its variable arrives, so the key goes on a generated column instead.
 -- VIRTUAL: no table rebuild, only the index is built.
-ALTER TABLE transfers ADD COLUMN TRANSFER_KEY VARCHAR(255)
-  GENERATED ALWAYS AS (IFNULL(TRANSACTION_ID, IF(BATCH_ID IS NULL, '', NULL))) VIRTUAL;
+SET @sql = (SELECT IF(EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'transfers' AND COLUMN_NAME = 'TRANSFER_KEY'), 'SELECT 1', 'ALTER TABLE transfers ADD COLUMN TRANSFER_KEY VARCHAR(255) GENERATED ALWAYS AS (IFNULL(TRANSACTION_ID, IF(BATCH_ID IS NULL, '''', NULL))) VIRTUAL'));
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
-ALTER TABLE transfers ADD UNIQUE KEY uk_transfers_instance_generation_key
-  (WORKFLOW_INSTANCE_KEY, ZEEBE_GENERATION, TRANSFER_KEY);
-ALTER TABLE transaction_requests ADD UNIQUE KEY uk_transaction_requests_instance_generation
-  (WORKFLOW_INSTANCE_KEY, ZEEBE_GENERATION);
-ALTER TABLE batches ADD UNIQUE KEY uk_batches_instance_generation
-  (WORKFLOW_INSTANCE_KEY, ZEEBE_GENERATION);
+SET @sql = (SELECT IF(EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'transfers' AND INDEX_NAME = 'uk_transfers_instance_generation_key'), 'SELECT 1', 'ALTER TABLE transfers ADD UNIQUE KEY uk_transfers_instance_generation_key (WORKFLOW_INSTANCE_KEY, ZEEBE_GENERATION, TRANSFER_KEY)'));
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql = (SELECT IF(EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'transaction_requests' AND INDEX_NAME = 'uk_transaction_requests_instance_generation'), 'SELECT 1', 'ALTER TABLE transaction_requests ADD UNIQUE KEY uk_transaction_requests_instance_generation (WORKFLOW_INSTANCE_KEY, ZEEBE_GENERATION)'));
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+SET @sql = (SELECT IF(EXISTS(SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'batches' AND INDEX_NAME = 'uk_batches_instance_generation'), 'SELECT 1', 'ALTER TABLE batches ADD UNIQUE KEY uk_batches_instance_generation (WORKFLOW_INSTANCE_KEY, ZEEBE_GENERATION)'));
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 -- Child process instance (call activity) to parent transfer, kept by the importer so child
 -- variables find their parent after a rebalance or a pod loss.

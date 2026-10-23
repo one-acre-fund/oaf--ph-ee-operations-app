@@ -115,8 +115,7 @@ public class TenantDatabaseUpgradeService {
                     placeholders.put("identityProviderResourceId", "identity-provider"); // add identity provider as aud claim
                     fw.setPlaceholders(placeholders);
                     if (flywayRepairOnStartup) {
-                        fw.repair();
-                        logger.warn("Flyway repair executed for tenant: {}", tenant.getSchemaName());
+                        repairFailedMigrations(fw, tenant.getSchemaName());
                     }
                     fw.migrate();
                 } catch (Exception e) {
@@ -125,6 +124,21 @@ public class TenantDatabaseUpgradeService {
                     ThreadLocalContextUtil.clear();
                 }
             }
+        }
+    }
+
+    // Flyway 2.1.1 repair() runs its DELETE outside a transaction, and the tenant pools open
+    // connections with autocommit off, so the delete was rolled back when the connection closed
+    // and the flag never removed anything. Delete the failed rows here and commit explicitly.
+    private void repairFailedMigrations(Flyway fw, String schema) {
+        try (Connection connection = fw.getDataSource().getConnection();
+             Statement statement = connection.createStatement()) {
+            connection.setCatalog(schema);
+            int removed = statement.executeUpdate("DELETE FROM schema_version WHERE success = 0");
+            connection.commit();
+            logger.warn("Flyway repair removed {} failed migration rows for tenant: {}", removed, schema);
+        } catch (SQLException e) {
+            logger.warn("Flyway repair skipped for tenant {}: {}", schema, e.getMessage());
         }
     }
 
