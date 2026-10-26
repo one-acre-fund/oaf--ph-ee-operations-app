@@ -1,6 +1,11 @@
 Release Notes
 
 
+## Version 1.1.21 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * Security
+            * Let CORS preflight (OPTIONS) requests through the security chain so the corsFilter can answer them; real requests still need a valid token
+
 ## Version 1.1.20 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * Export
