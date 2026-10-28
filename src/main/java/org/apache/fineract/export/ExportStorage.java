@@ -16,7 +16,7 @@ public class ExportStorage {
     private final ExportProperties properties;
 
     public ExportStorage(@Qualifier("awsStorage") FileTransferService fileTransferService,
-                         @Value("${export.bucket-name:${application.bucket-name}}") String bucketName, ExportProperties properties) {
+                         @Value("${export.bucket-name}") String bucketName, ExportProperties properties) {
         this.fileTransferService = fileTransferService;
         this.bucketName = bucketName;
         this.properties = properties;
