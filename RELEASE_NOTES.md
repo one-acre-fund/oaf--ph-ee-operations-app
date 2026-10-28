@@ -1,6 +1,11 @@
 Release Notes
 
 
+## Version 1.1.22 - Up to date with Mifos Version 1.5.0
+    * Payment Hub OPs
+        * Export
+            * Exports use their own bucket (export.bucket-name / EXPORT_BUCKETNAME), required at startup; batch result files keep application.bucket-name
+
 ## Version 1.1.21 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
         * Security
