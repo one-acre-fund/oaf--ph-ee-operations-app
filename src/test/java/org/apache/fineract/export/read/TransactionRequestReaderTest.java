@@ -117,6 +117,26 @@ class TransactionRequestReaderTest {
     }
 
     @Test
+    @DisplayName("Bounds the error description lookup by the export date range, with slack for late failures")
+    void boundsErrorDescriptionByDateRange() throws IOException {
+        H2Entities.inTransaction(factory, em -> {
+            // r2 started at 200 s: a variable written at its start is inside the bound
+            em.persist(variableAt(2, "errorDescription", "\"Insufficient funds\"", 200_000L));
+            // r3 started at 200 s: a failure reported 8 days later is outside the 7 day slack
+            em.persist(variableAt(3, "errorDescription", "\"Timeout\"",
+                    200_000L + TransactionRequestReader.VARIABLE_AFTER_START_MS + 86_400_000L));
+        });
+        ExportCriteria inRange = ExportCriteria.builder()
+                .startFrom(new Date(150_000L)).startTo(new Date(250_000L))
+                .filters(Collections.singletonMap(Filter.ERRORDESCRIPTION, Arrays.asList("Insufficient funds", "Timeout")))
+                .build();
+        assertEquals(Collections.singletonList("r2"), read(inRange));
+        // without a date range nothing is bounded and both are found
+        assertEquals(Arrays.asList("r3", "r2"),
+                read(criteria(Filter.ERRORDESCRIPTION, Arrays.asList("Insufficient funds", "Timeout"))));
+    }
+
+    @Test
     @DisplayName("Ignores a filter with an empty or missing list, as the legacy export does")
     void ignoresEmptyFilterList() throws IOException {
         assertEquals(Arrays.asList("r3", "r2", "r1", "r5", "r6", "r4"),
@@ -162,6 +182,12 @@ class TransactionRequestReaderTest {
         request.setClientCorrelationId("cc-" + transactionId);
         request.setAmsBusinessShortCode("ams-" + transactionId);
         return request;
+    }
+
+    private static Variable variableAt(long workflowInstanceKey, String name, String value, long timestamp) {
+        Variable variable = variable(workflowInstanceKey, name, value);
+        variable.setTimestamp(timestamp);
+        return variable;
     }
 
     private static Variable variable(long workflowInstanceKey, String name, String value) {
