@@ -16,6 +16,8 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import javax.persistence.criteria.Subquery;
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -25,8 +27,19 @@ public class TransactionRequestReader extends JpaKeysetReader<TransactionRequest
     static final String ERROR_DESCRIPTION_VARIABLE = "errorDescription";
 
 
+    /**
+     * FD-1737: variables is partitioned by month on TIMESTAMP, so a bound on the variable rows lets MySQL skip
+     * whole partitions. The variables of a request are written between its start and its end; the slack covers
+     * clock skew before the start and a failure reported days later by a timer.
+     */
+    static final long VARIABLE_BEFORE_START_MS = TimeUnit.DAYS.toMillis(1);
+    static final long VARIABLE_AFTER_START_MS = TimeUnit.DAYS.toMillis(7);
+
+    private final ExportCriteria criteria;
+
     public TransactionRequestReader(EntityManagerFactory entityManagerFactory, ExportCriteria criteria, int chunkSize) {
         super(entityManagerFactory, TransactionRequest.class, criteria, TransactionRequest_.startedAt, chunkSize);
+        this.criteria = criteria;
     }
 
     @Override
@@ -83,10 +96,17 @@ public class TransactionRequestReader extends JpaKeysetReader<TransactionRequest
 
         Subquery<Long> subquery = query.subquery(Long.class);
         Root<Variable> variable = subquery.from(Variable.class);
-        subquery.select(variable.get(AbstractPersistableCustom_.id)).where(
+        List<Predicate> where = new ArrayList<>(Arrays.asList(
                 cb.equal(variable.get(Variable_.transactionRequest), root),
                 cb.equal(variable.get(Variable_.name), ERROR_DESCRIPTION_VARIABLE),
-                variable.get(Variable_.value).in(matches));
+                variable.get(Variable_.value).in(matches)));
+        if (criteria.getStartFrom() != null) {
+            where.add(cb.ge(variable.get(Variable_.timestamp), criteria.getStartFrom().getTime() - VARIABLE_BEFORE_START_MS));
+        }
+        if (criteria.getStartTo() != null) {
+            where.add(cb.le(variable.get(Variable_.timestamp), criteria.getStartTo().getTime() + VARIABLE_AFTER_START_MS));
+        }
+        subquery.select(variable.get(AbstractPersistableCustom_.id)).where(where.toArray(new Predicate[0]));
         return cb.exists(subquery);
     }
 
