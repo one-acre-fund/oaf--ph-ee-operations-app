@@ -102,6 +102,16 @@ payment:
 application:
   bucket-name: paymenthub-ee-dev
 
+# FD-1737: monthly retention of the partitioned variables table (off until the table is cut over)
+variables:
+  retention:
+    enabled: false
+    months: 12
+    ahead-months: 3
+    cron: "0 0 3 2 * *"
+    storage-prefix: "variables-archive/"
+    dry-run: false
+
 ams:
   sources: '[{"name": "TUPANDE ACCOUNT", "id": "TUPANDEACCOUNTID"}]'
 
