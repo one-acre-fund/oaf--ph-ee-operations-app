@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class VariablePartitionsTest {
 
@@ -45,5 +46,13 @@ class VariablePartitionsTest {
         assertEquals(Collections.emptyList(), VariablePartitions.toDrop(V56, YearMonth.of(2027, 9), 12));
         assertEquals(Arrays.asList("p2026_09", "p2026_10", "p2026_11", "p2026_12"),
                 VariablePartitions.toDrop(V56, YearMonth.of(2027, 7), 6));
+    }
+
+    @Test
+    void checkedAcceptsOnlyPartitionNames() {
+        assertEquals("p2026_11", VariablePartitions.checked("p2026_11"));
+        assertEquals("pmax", VariablePartitions.checked("pmax"));
+        assertThrows(IllegalArgumentException.class, () -> VariablePartitions.checked("p2026_11 , pmax"));
+        assertThrows(IllegalArgumentException.class, () -> VariablePartitions.checked("variables"));
     }
 }

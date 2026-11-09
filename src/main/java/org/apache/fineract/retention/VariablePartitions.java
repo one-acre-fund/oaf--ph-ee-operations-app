@@ -20,6 +20,17 @@ final class VariablePartitions {
     private VariablePartitions() {
     }
 
+    /**
+     * Returns the name unchanged if it is pmax or pYYYY_MM, and throws otherwise. Partition names cannot be bind
+     * parameters, so every name that reaches SQL goes through here first.
+     */
+    static String checked(String partitionName) {
+        if (PMAX.equals(partitionName) || MONTH.matcher(partitionName).matches()) {
+            return partitionName;
+        }
+        throw new IllegalArgumentException("Not a variables partition name: " + partitionName);
+    }
+
     static String name(YearMonth month) {
         return String.format("p%04d_%02d", month.getYear(), month.getMonthValue());
     }

@@ -45,20 +45,23 @@ class JdbcVariableTableOps implements VariableTableOps {
 
     @Override
     public long rowCount(String partition) {
-        Long count = jdbc().queryForObject("SELECT COUNT(*) FROM variables PARTITION (" + partition + ")", Long.class);
+        String sql = "SELECT COUNT(*) FROM variables PARTITION (" + VariablePartitions.checked(partition) + ")";
+        Long count = jdbc().queryForObject(sql, Long.class); // NOSONAR partition name checked against pmax|pYYYY_MM
         return count == null ? 0 : count;
     }
 
     @Override
     public void addMonth(YearMonth month) {
-        jdbc().execute("ALTER TABLE variables REORGANIZE PARTITION " + VariablePartitions.PMAX + " INTO ("
+        String sql = "ALTER TABLE variables REORGANIZE PARTITION " + VariablePartitions.PMAX + " INTO ("
                 + "PARTITION " + VariablePartitions.name(month) + " VALUES LESS THAN ("
                 + VariablePartitions.upperBoundMillis(month) + "), "
-                + "PARTITION " + VariablePartitions.PMAX + " VALUES LESS THAN MAXVALUE)");
+                + "PARTITION " + VariablePartitions.PMAX + " VALUES LESS THAN MAXVALUE)";
+        jdbc().execute(sql); // NOSONAR built from a YearMonth and constants only
     }
 
     @Override
     public void dropPartition(String partition) {
-        jdbc().execute("ALTER TABLE variables DROP PARTITION " + partition);
+        String sql = "ALTER TABLE variables DROP PARTITION " + VariablePartitions.checked(partition);
+        jdbc().execute(sql); // NOSONAR partition name checked against pmax|pYYYY_MM
     }
 }

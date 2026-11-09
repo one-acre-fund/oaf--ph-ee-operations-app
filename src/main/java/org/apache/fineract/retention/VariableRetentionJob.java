@@ -83,28 +83,29 @@ public class VariableRetentionJob {
                     tenant, strays, VariablePartitions.PMAX);
         }
         for (YearMonth month : VariablePartitions.toAdd(partitions, current, properties.getAheadMonths())) {
+            String name = VariablePartitions.name(month);
             if (properties.isDryRun()) {
-                logger.info("Tenant {}: dry run, would add partition {}", tenant, VariablePartitions.name(month));
+                logger.info("Tenant {}: dry run, would add partition {}", tenant, name);
                 continue;
             }
             table.addMonth(month);
-            logger.info("Tenant {}: added partition {}", tenant, VariablePartitions.name(month));
+            logger.info("Tenant {}: added partition {}", tenant, name);
         }
     }
 
     private void archiveAndDrop(String tenant, List<String> partitions, YearMonth current) {
         for (String partition : VariablePartitions.toDrop(partitions, current, properties.getMonths())) {
             long rows = table.rowCount(partition);
+            String key = archive.keyFor(tenant, partition);
             if (properties.isDryRun()) {
                 logger.info("Tenant {}: dry run, would archive {} rows of {} to {} and drop it", tenant, rows,
-                        partition, archive.keyFor(tenant, partition));
+                        partition, key);
                 continue;
             }
             if (rows > 0) {
                 try {
                     long written = archive.archive(tenant, partition);
-                    logger.info("Tenant {}: archived {} rows of {} to {}", tenant, written, partition,
-                            archive.keyFor(tenant, partition));
+                    logger.info("Tenant {}: archived {} rows of {} to {}", tenant, written, partition, key);
                 } catch (RuntimeException e) {
                     logger.error("Tenant {}: archiving {} failed, partition kept; retrying next run", tenant,
                             partition, e);

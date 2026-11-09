@@ -18,6 +18,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -65,7 +66,8 @@ public class VariableArchive {
         String key = keyFor(tenant, partition);
         Path file = null;
         try {
-            file = Files.createTempFile("variables_" + partition + "_", ".csv.gz");
+            file = Files.createTempFile("variables_" + partition + "_", ".csv.gz",
+                    PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rw-------")));
             long rows = writeGzipCsv(partition, file);
             fileTransferService.uploadFile(key, file.toFile(), bucketName);
             long stored = s3.getObjectMetadata(bucketName, key).getContentLength();
@@ -98,8 +100,9 @@ public class VariableArchive {
                      CsvPreference.STANDARD_PREFERENCE)) {
             statement.setFetchSize(Integer.MIN_VALUE); // MySQL streams the result instead of buffering it
             csv.writeHeader(COLUMNS);
-            try (ResultSet rs = statement.executeQuery("SELECT " + String.join(", ", quoted(COLUMNS))
-                    + " FROM variables PARTITION (" + partition + ")")) {
+            String sql = "SELECT " + String.join(", ", quoted(COLUMNS))
+                    + " FROM variables PARTITION (" + VariablePartitions.checked(partition) + ")";
+            try (ResultSet rs = statement.executeQuery(sql)) { // NOSONAR partition name checked against pmax|pYYYY_MM
                 String[] row = new String[COLUMNS.length];
                 while (rs.next()) {
                     for (int i = 0; i < COLUMNS.length; i++) {
