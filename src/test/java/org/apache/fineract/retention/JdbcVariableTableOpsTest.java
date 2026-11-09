@@ -51,18 +51,34 @@ class JdbcVariableTableOpsTest {
     }
 
     @Test
-    @DisplayName("Takes and releases a per-tenant named lock")
+    @DisplayName("Holds the per-tenant named lock on one connection until unlock")
     void lock() throws SQLException {
-        when(rs.next()).thenReturn(true, false, true, false, true, false);
-        when(rs.getInt(1)).thenReturn(1, 0, 1);
+        when(rs.next()).thenReturn(true, true, true);
+        when(rs.getInt(1)).thenReturn(0, 1, 1);
+
+        assertFalse(ops.tryLock("kenya"));
+        verify(connection, times(1)).close();
 
         assertTrue(ops.tryLock("kenya"));
-        assertFalse(ops.tryLock("kenya"));
-        ops.unlock("kenya");
+        verify(connection, times(1)).close();
 
+        ops.unlock("kenya");
         verify(connection, times(2)).prepareStatement("SELECT GET_LOCK(?, 0)");
         verify(connection).prepareStatement("SELECT RELEASE_LOCK(?)");
         verify(prepared, times(3)).setString(1, "variables_retention_kenya");
+        verify(connection, times(2)).close();
+
+        ops.unlock("kenya");
+        verify(connection).prepareStatement("SELECT RELEASE_LOCK(?)");
+    }
+
+    @Test
+    @DisplayName("A failed lock query closes its connection and fails the tenant")
+    void lockFailure() throws SQLException {
+        when(prepared.executeQuery()).thenThrow(new SQLException("gone"));
+
+        assertThrows(IllegalStateException.class, () -> ops.tryLock("kenya"));
+        verify(connection).close();
     }
 
     @Test
