@@ -147,7 +147,9 @@ jobs:
       - name: Set up Java Version
         uses: actions/setup-java@v4.7.0
         with:
-          java-version: "21"
+          # JVM that runs Gradle: the 7.5.1 wrapper supports Java 18 at most. SonarCloud needs
+          # Java 21, which the org.sonarqube plugin (6.0+) downloads for the analysis itself.
+          java-version: "17"
           distribution: "temurin"
 
       - name: Cache SonarCloud packages
