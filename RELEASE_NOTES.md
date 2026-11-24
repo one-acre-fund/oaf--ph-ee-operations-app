@@ -1,4 +1,4 @@
-Release Notes
+# Release Notes
 
 ## Version 1.1.23 - Up to date with Mifos Version 1.5.0
     * Payment Hub OPs
